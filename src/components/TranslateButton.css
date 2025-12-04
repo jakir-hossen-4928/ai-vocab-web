@@ -1,0 +1,123 @@
+/* TranslateButton.css */
+
+.translate-wrapper {
+  display: inline-block;
+  vertical-align: middle;
+  position: relative;
+}
+
+/* The Trigger Button */
+.translate-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f0fdf4; /* Light green bg */
+  border: 1px solid #bbf7d0;
+  color: #15803d; /* Green text */
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 8px;
+  line-height: 1;
+}
+
+.translate-trigger-btn:hover {
+  background: #dcfce7;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.translate-trigger-btn.active {
+  background: #16a34a;
+  color: white;
+  border-color: #16a34a;
+}
+
+.flag-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.btn-label {
+  font-family: 'Hind Siliguri', 'Noto Sans Bengali', sans-serif;
+}
+
+/* The Translation Card (Result) */
+.translation-card {
+  display: block;
+  margin-top: 12px;
+  background: linear-gradient(to right bottom, #ffffff, #f0fdf4);
+  border: 1px solid #86efac;
+  border-radius: 12px;
+  padding: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  animation: slideDown 0.3s ease-out;
+  overflow: hidden;
+  width: 100%;
+  min-width: 280px; /* Ensure it's not too squashed */
+  max-width: 600px; /* Prevent it from being too wide on large screens if inline */
+
+  /* Important: If the parent is flex/inline, we might want this to break out.
+     But since we are refactoring usage to be block-friendly, this is fine.
+     If used inside a flex row, it might need width adjustments. */
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.translation-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(22, 163, 74, 0.1);
+  border-bottom: 1px solid rgba(22, 163, 74, 0.1);
+}
+
+.lang-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #15803d;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.close-icon-btn {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.close-icon-btn:hover {
+  background: rgba(0,0,0,0.05);
+  color: #ef4444;
+}
+
+.translation-body {
+  padding: 12px 16px;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #1f2937;
+  font-family: 'Hind Siliguri', 'Noto Sans Bengali', sans-serif;
+  font-weight: 500;
+}
