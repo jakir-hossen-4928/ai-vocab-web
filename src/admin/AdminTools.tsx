@@ -220,7 +220,7 @@ export default function AdminTools() {
 
                 await updateVocabulary.mutateAsync({
                     id: vocab.id,
-                    ...enhanced,
+                    data: enhanced,
                 });
 
                 setResults(prev => prev.map(r =>
@@ -266,7 +266,7 @@ export default function AdminTools() {
         try {
             await updateVocabulary.mutateAsync({
                 id: previewVocab.id,
-                ...enhancedData,
+                data: enhancedData,
             });
             toast.success("Vocabulary enhanced successfully!");
             setShowPreview(false);

@@ -9,7 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Volume2, BookOpen, MessageSquare, Activity, Layers, ArrowRightLeft, Copy, Heart, Edit } from "lucide-react";
+import { Volume2, BookOpen, MessageSquare, Activity, Layers, ArrowRightLeft, Copy, Heart, Edit, ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { speakText } from "@/services/ttsService";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -26,6 +26,10 @@ interface VocabularyDetailsModalProps {
     isFavorite?: boolean;
     onToggleFavorite?: (id: string) => void;
     isAdmin?: boolean;
+    onNext?: () => void;
+    onPrevious?: () => void;
+    hasNext?: boolean;
+    hasPrevious?: boolean;
 }
 
 // Helper component for TTS button
@@ -51,6 +55,10 @@ export function VocabularyDetailsModal({
     isFavorite = false,
     onToggleFavorite,
     isAdmin = false,
+    onNext,
+    onPrevious,
+    hasNext = false,
+    hasPrevious = false,
 }: VocabularyDetailsModalProps) {
     const navigate = useNavigate();
     const [isEditing, setIsEditing] = useState(false);
@@ -62,6 +70,22 @@ export function VocabularyDetailsModal({
             setEditedVocab(vocabulary);
         }
     }, [vocabulary]);
+
+    // Keyboard navigation
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (!open) return;
+
+            if (e.key === "ArrowLeft" && hasPrevious && onPrevious && !isEditing) {
+                onPrevious();
+            } else if (e.key === "ArrowRight" && hasNext && onNext && !isEditing) {
+                onNext();
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [open, hasNext, hasPrevious, onNext, onPrevious, isEditing]);
 
     if (!vocabulary) return null;
 
@@ -92,10 +116,37 @@ export function VocabularyDetailsModal({
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-5xl h-[90vh] p-0 overflow-hidden flex flex-col gap-0 border-none shadow-2xl">
+                {/* Navigation Buttons - Desktop */}
+                {(hasPrevious || hasNext) && (
+                    <>
+                        {hasPrevious && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={onPrevious}
+                                className="absolute left-4 top-1/2 -translate-y-1/2 z-50 h-12 w-12 rounded-full bg-background/50 hover:bg-primary hover:text-primary-foreground border border-muted-foreground/20 hover:border-primary shadow-md backdrop-blur-sm hidden sm:flex transition-all duration-300"
+                                aria-label="Previous vocabulary"
+                            >
+                                <ChevronLeft className="h-8 w-8" />
+                            </Button>
+                        )}
+                        {hasNext && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={onNext}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 z-50 h-12 w-12 rounded-full bg-background/50 hover:bg-primary hover:text-primary-foreground border border-muted-foreground/20 hover:border-primary shadow-md backdrop-blur-sm hidden sm:flex transition-all duration-300"
+                                aria-label="Next vocabulary"
+                            >
+                                <ChevronRight className="h-8 w-8" />
+                            </Button>
+                        )}
+                    </>
+                )}
                 <ScrollArea className="flex-1 h-full [&>[data-radix-scroll-area-viewport]]:!overflow-y-scroll [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-                    <div className="p-6 space-y-8 pb-20">
+                    <div className="py-6 px-6 sm:px-20 space-y-8 pb-20">
                         {/* Header Section */}
-                        <div className="bg-gradient-to-br from-primary/5 to-primary/10 -mx-6 -mt-6 p-8 border-b relative">
+                        <div className="bg-gradient-to-br from-primary/5 to-primary/10 -mx-6 sm:-mx-20 -mt-6 p-8 sm:px-20 border-b relative">
                             {/* Action Buttons */}
                             <div className="absolute top-4 right-12 flex gap-2">
                                 {isEditing ? (
@@ -147,6 +198,31 @@ export function VocabularyDetailsModal({
                                     </>
                                 )}
                             </div>
+
+                            {/* Mobile Navigation - Top */}
+                            {(hasPrevious || hasNext) && (
+                                <div className="flex sm:hidden justify-between items-center mb-4 -mt-2">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={onPrevious}
+                                        disabled={!hasPrevious}
+                                        className={`h-8 w-8 rounded-full ${!hasPrevious ? 'opacity-0' : ''}`}
+                                    >
+                                        <ChevronLeft className="h-5 w-5" />
+                                    </Button>
+                                    <span className="text-xs text-muted-foreground font-medium">Swipe to navigate</span>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={onNext}
+                                        disabled={!hasNext}
+                                        className={`h-8 w-8 rounded-full ${!hasNext ? 'opacity-0' : ''}`}
+                                    >
+                                        <ChevronRight className="h-5 w-5" />
+                                    </Button>
+                                </div>
+                            )}
 
                             <div className="flex flex-col gap-4">
                                 <div className="flex items-center gap-3 flex-wrap">

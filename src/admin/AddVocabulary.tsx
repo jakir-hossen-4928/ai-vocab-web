@@ -136,7 +136,7 @@ export default function AddVocabulary() {
       }
 
       if (id) {
-        await updateVocabulary.mutateAsync({ id, ...data });
+        await updateVocabulary.mutateAsync({ id, data });
         toast.success("Vocabulary updated successfully");
       } else {
         await addVocabulary.mutateAsync({

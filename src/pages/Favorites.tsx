@@ -22,7 +22,7 @@ export default function Favorites() {
   const { favorites, toggleFavorite } = useFavorites();
 
   const [exporting, setExporting] = useState(false);
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
 
   // Chat State
@@ -211,7 +211,21 @@ export default function Favorites() {
         onOpenChange={setIsDetailsModalOpen}
         isFavorite={true}
         onToggleFavorite={toggleFavorite}
-        isAdmin={user?.role === 'admin'}
+        isAdmin={isAdmin}
+        onNext={() => {
+          const currentIndex = favoriteVocabs.findIndex(v => v.id === selectedVocab?.id);
+          if (currentIndex !== -1 && currentIndex < favoriteVocabs.length - 1) {
+            setSelectedVocab(favoriteVocabs[currentIndex + 1]);
+          }
+        }}
+        onPrevious={() => {
+          const currentIndex = favoriteVocabs.findIndex(v => v.id === selectedVocab?.id);
+          if (currentIndex > 0) {
+            setSelectedVocab(favoriteVocabs[currentIndex - 1]);
+          }
+        }}
+        hasNext={selectedVocab ? favoriteVocabs.findIndex(v => v.id === selectedVocab.id) !== -1 && favoriteVocabs.findIndex(v => v.id === selectedVocab.id) < favoriteVocabs.length - 1 : false}
+        hasPrevious={selectedVocab ? favoriteVocabs.findIndex(v => v.id === selectedVocab.id) > 0 : false}
       />
     </div >
   );

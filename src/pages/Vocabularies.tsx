@@ -676,6 +676,20 @@ export default function Vocabularies() {
         isFavorite={selectedVocab ? favorites.includes(selectedVocab.id) : false}
         onToggleFavorite={toggleFavorite}
         isAdmin={isAdmin}
+        onNext={() => {
+          const currentIndex = filteredVocabs.findIndex(v => v.id === selectedVocab?.id);
+          if (currentIndex !== -1 && currentIndex < filteredVocabs.length - 1) {
+            setSelectedVocab(filteredVocabs[currentIndex + 1]);
+          }
+        }}
+        onPrevious={() => {
+          const currentIndex = filteredVocabs.findIndex(v => v.id === selectedVocab?.id);
+          if (currentIndex > 0) {
+            setSelectedVocab(filteredVocabs[currentIndex - 1]);
+          }
+        }}
+        hasNext={selectedVocab ? filteredVocabs.findIndex(v => v.id === selectedVocab.id) !== -1 && filteredVocabs.findIndex(v => v.id === selectedVocab.id) < filteredVocabs.length - 1 : false}
+        hasPrevious={selectedVocab ? filteredVocabs.findIndex(v => v.id === selectedVocab.id) > 0 : false}
       />
     </div >
   );

@@ -25,7 +25,7 @@ export default function Home() {
   const debouncedSearch = useDebounce(searchQuery, 300);
   const { data, isLoading } = useVocabularies();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   // Use Dexie-backed favorites
   const { favorites, toggleFavorite } = useFavorites();
@@ -374,7 +374,21 @@ export default function Home() {
         onOpenChange={setIsDetailsModalOpen}
         isFavorite={selectedVocab ? favorites.includes(selectedVocab.id) : false}
         onToggleFavorite={toggleFavorite}
-        isAdmin={user?.role === 'admin'}
+        isAdmin={isAdmin}
+        onNext={() => {
+          const currentIndex = allResults.findIndex(v => v.id === selectedVocab?.id);
+          if (currentIndex !== -1 && currentIndex < allResults.length - 1) {
+            setSelectedVocab(allResults[currentIndex + 1]);
+          }
+        }}
+        onPrevious={() => {
+          const currentIndex = allResults.findIndex(v => v.id === selectedVocab?.id);
+          if (currentIndex > 0) {
+            setSelectedVocab(allResults[currentIndex - 1]);
+          }
+        }}
+        hasNext={selectedVocab ? allResults.findIndex(v => v.id === selectedVocab.id) !== -1 && allResults.findIndex(v => v.id === selectedVocab.id) < allResults.length - 1 : false}
+        hasPrevious={selectedVocab ? allResults.findIndex(v => v.id === selectedVocab.id) > 0 : false}
       />
     </div>
   );
