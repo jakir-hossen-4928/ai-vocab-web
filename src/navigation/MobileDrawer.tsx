@@ -171,7 +171,7 @@ export const MobileDrawer = ({ open, onOpenChange }: MobileDrawerProps) => {
                                 <span>AI Enhancement</span>
                             </NavLink>
                             <NavLink
-                                to="/resources"
+                                to="/admin/resources"
                                 onClick={() => onOpenChange(false)}
                                 className="flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all"
                                 activeClassName="bg-primary/10 text-primary font-medium"

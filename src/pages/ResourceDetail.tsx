@@ -10,7 +10,7 @@ import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
-import { sanitizeForDisplay } from "@/utils/textCleaner";
+import parse from "html-react-parser";
 
 export default function ResourceDetail() {
     const { id } = useParams();
@@ -67,6 +67,8 @@ export default function ResourceDetail() {
     }
 
     if (!grammar) return null;
+
+    const isHtml = /<[a-z][\s\S]*>/i.test(grammar.description || '');
 
     return (
         <div className="min-h-screen bg-background pb-20">
@@ -153,7 +155,7 @@ export default function ResourceDetail() {
                             prose-blockquote:border-l-primary prose-blockquote:bg-muted/50 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r-lg
                             prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:before:content-none prose-code:after:content-none"
                         >
-                            <ReactMarkdown>{grammar.description}</ReactMarkdown>
+                            {isHtml ? parse(grammar.description) : <ReactMarkdown>{grammar.description}</ReactMarkdown>}
                         </div>
                     </motion.div>
                 )}

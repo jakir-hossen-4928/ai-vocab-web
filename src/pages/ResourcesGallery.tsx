@@ -1,22 +1,14 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { uploadImage } from "@/services/imageService";
-import { GrammarImage } from "@/types/grammar";
-import { useResourcesSimple, useResourceMutations } from "@/hooks/useResources";
+import { useResourcesSimple } from "@/hooks/useResources";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Search,
   GraduationCap,
   ZoomIn,
-  Plus,
-  Edit,
-  Trash2,
-  Loader2,
   Filter,
   SortAsc,
   SortDesc,
@@ -24,7 +16,6 @@ import {
 } from "lucide-react";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { motion } from "framer-motion";
-import { showSuccessToast, showErrorToast, confirmAction } from "@/utils/sweetAlert";
 import {
   Select,
   SelectContent,
@@ -32,14 +23,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Sheet,
   SheetContent,
@@ -50,146 +33,24 @@ import {
   SheetFooter,
   SheetClose,
 } from "@/components/ui/sheet";
-import { cleanTextContent } from "@/utils/textCleaner";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { cleanTextContent } from "@/utils/textCleaner";
 
 export default function ResourcesGallery() {
   const navigate = useNavigate();
-  const { isAdmin, user } = useAuth();
 
   // Use Dexie-backed resources with 15-minute cache
   const { data: images = [], isLoading: loading } = useResourcesSimple();
-  const { addResource, updateResource, deleteResource } = useResourceMutations();
 
-  const [uploading, setUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "title">("newest");
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "week" | "month" | "custom">("all");
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-
-  // Form states
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Virtual scrolling ref
   const parentRef = useRef<HTMLDivElement>(null);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingId) {
-      await handleUpdate();
-    } else {
-      await handleAdd();
-    }
-  };
-
-  const handleAdd = async () => {
-    if (!title.trim()) {
-      showErrorToast("Please provide a title");
-      return;
-    }
-
-    setUploading(true);
-    try {
-      let imageUrl = "";
-      if (file) {
-        imageUrl = await uploadImage(file);
-      }
-
-      const docData: any = {
-        title: title.trim(),
-        description: cleanTextContent(description),
-        createdAt: new Date().toISOString(),
-        userId: user!.uid
-      };
-
-      if (imageUrl) {
-        docData.imageUrl = imageUrl;
-      }
-
-      await addResource.mutateAsync(docData);
-      resetForm();
-    } catch (error) {
-      console.error("Error adding resource:", error);
-      // Error toast is handled by mutation
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleUpdate = async () => {
-    if (!editingId || !title.trim()) return;
-
-    setUploading(true);
-    try {
-      const updateData: any = {
-        id: editingId,
-        title: title.trim(),
-        description: cleanTextContent(description),
-      };
-
-      if (file) {
-        const imageUrl = await uploadImage(file);
-        updateData.imageUrl = imageUrl;
-      }
-
-      await updateResource.mutateAsync(updateData);
-      resetForm();
-    } catch (error) {
-      console.error("Error updating resource:", error);
-      // Error toast is handled by mutation
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-
-    const isConfirmed = await confirmAction(
-      'Are you sure?',
-      "Are you sure you want to delete this resource?",
-      'Yes, delete it!'
-    );
-
-    if (isConfirmed) {
-      try {
-        await deleteResource.mutateAsync(id);
-        showSuccessToast('Resource deleted successfully');
-      } catch (error) {
-        // Error toast is handled by mutation
-      }
-    }
-  };
-
-  const startEditing = (img: GrammarImage, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditingId(img.id);
-    setTitle(img.title);
-    setDescription(img.description || "");
-    setFile(null);
-    setIsDialogOpen(true);
-  };
-
-  const openAddDialog = () => {
-    resetForm();
-    setIsDialogOpen(true);
-  };
-
-  const resetForm = () => {
-    setTitle("");
-    setDescription("");
-    setFile(null);
-    setEditingId(null);
-    setIsDialogOpen(false);
-    const fileInput = document.getElementById('image-upload') as HTMLInputElement;
-    if (fileInput) fileInput.value = '';
-  };
 
   const clearFilters = () => {
     setSortBy("newest");
@@ -282,15 +143,6 @@ export default function ResourcesGallery() {
                 Visual guides and articles for mastering English
               </p>
             </div>
-            {isAdmin && (
-              <Button
-                onClick={openAddDialog}
-                variant="secondary"
-                className="shadow-lg"
-              >
-                <Plus className="mr-2 h-4 w-4" /> Add New
-              </Button>
-            )}
           </div>
         </div>
       </motion.header>
@@ -463,35 +315,12 @@ export default function ResourcesGallery() {
                   >
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-6">
                       {rowItems.map((img, colIndex) => {
-                        const index = startIndex + colIndex;
                         return (
                           <motion.div
                             key={img.id}
                             onClick={() => navigate(`/resources/${img.id}`)}
                           >
                             <Card className="overflow-hidden h-full flex flex-col hover:shadow-lg transition-shadow cursor-pointer group border-0 bg-card/50 backdrop-blur-sm relative">
-                              {/* Admin Controls Overlay */}
-                              {isAdmin && (
-                                <div className="absolute top-2 right-2 z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Button
-                                    variant="secondary"
-                                    size="icon"
-                                    className="h-8 w-8 shadow-lg"
-                                    onClick={(e) => startEditing(img, e)}
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="destructive"
-                                    size="icon"
-                                    className="h-8 w-8 shadow-lg"
-                                    onClick={(e) => handleDelete(img.id, e)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              )}
-
                               <div className="relative aspect-video overflow-hidden bg-muted/30 flex items-center justify-center">
                                 {img.imageUrl ? (
                                   <>
@@ -514,9 +343,22 @@ export default function ResourcesGallery() {
                                 <h3 className="text-xl font-bold mb-2 line-clamp-2 group-hover:text-primary transition-colors">
                                   {img.title}
                                 </h3>
-                                <p className="text-muted-foreground text-sm line-clamp-3 mb-4 flex-1">
-                                  {img.description || "Explore this resource in detail..."}
-                                </p>
+                                <div className="text-muted-foreground text-sm line-clamp-3 mb-4 flex-1">
+                                  {(() => {
+                                    if (!img.description) return "Explore this resource in detail...";
+                                    // Basic check to see if it's HTML (from rich text editor)
+                                    const isHtml = /<[a-z][\s\S]*>/i.test(img.description);
+                                    if (isHtml) {
+                                      // Create a temporary element to strip HTML tags for preview
+                                      const tmp = document.createElement("DIV");
+                                      tmp.innerHTML = img.description;
+                                      return (tmp.textContent || tmp.innerText || "").slice(0, 100) + "...";
+                                    } else {
+                                      // It's likely markdown or plain text
+                                      return cleanTextContent(img.description).slice(0, 100) + '...';
+                                    }
+                                  })()}
+                                </div>
                                 <div className="flex items-center justify-between mt-auto pt-2 border-t">
                                   <div className="text-primary text-sm font-medium flex items-center">
                                     Read Article <ZoomIn className="ml-2 h-4 w-4" />
@@ -538,70 +380,6 @@ export default function ResourcesGallery() {
           )}
         </div>
       </div>
-
-      {/* Add/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingId ? "Edit Resource" : "Add New Resource"}</DialogTitle>
-            <DialogDescription>
-              {editingId ? "Update the resource details below" : "Create a new educational resource"}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g., Mastering Present Perfect"
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="description">Description / Content</Label>
-              <div className="text-xs text-muted-foreground mb-1">
-                Supports Markdown (e.g., **bold**, # Heading)
-              </div>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Write a brief description or the full content..."
-                className="mt-1 min-h-[200px] font-mono text-sm"
-              />
-            </div>
-            <div>
-              <Label htmlFor="image-upload">
-                {editingId ? "Update Image (Optional)" : "Cover Image (Optional)"}
-              </Label>
-              <Input
-                id="image-upload"
-                type="file"
-                accept="image/*"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                className="mt-1"
-              />
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={resetForm}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={uploading}>
-                {uploading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {editingId ? "Updating..." : "Publishing..."}
-                  </>
-                ) : (
-                  editingId ? "Update Resource" : "Publish Resource"
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
