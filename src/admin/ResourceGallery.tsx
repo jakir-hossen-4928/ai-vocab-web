@@ -213,13 +213,13 @@ export default function AdminResourceGallery() {
                 ) : (
                     <>
                         {/* Desktop View: Table */}
-                        <div className="hidden md:block">
-                            <Table>
+                        <div className="hidden lg:block rounded-md border overflow-x-auto">
+                            <Table className="min-w-[800px]">
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-[100px]">Image</TableHead>
-                                        <TableHead>Title</TableHead>
-                                        <TableHead>Created</TableHead>
+                                        <TableHead className="w-[120px]">Image</TableHead>
+                                        <TableHead className="min-w-[200px]">Title</TableHead>
+                                        <TableHead className="w-[150px]">Created</TableHead>
                                         <TableHead className="w-[100px] text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -227,16 +227,18 @@ export default function AdminResourceGallery() {
                                     {filteredImages.map((img) => (
                                         <TableRow key={img.id}>
                                             <TableCell>
-                                                <div className="h-10 w-16 overflow-hidden rounded-md bg-muted flex items-center justify-center">
+                                                <div className="h-12 w-20 overflow-hidden rounded-md bg-muted flex items-center justify-center border">
                                                     {img.imageUrl ? (
                                                         <img src={img.imageUrl} alt={img.title} className="h-full w-full object-cover" />
                                                     ) : (
-                                                        <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                                                        <ImageIcon className="h-5 w-5 text-muted-foreground" />
                                                     )}
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="font-medium">{img.title}</TableCell>
-                                            <TableCell className="text-muted-foreground">
+                                            <TableCell className="font-medium">
+                                                <div className="line-clamp-2" title={img.title}>{img.title}</div>
+                                            </TableCell>
+                                            <TableCell className="text-muted-foreground whitespace-nowrap">
                                                 {new Date(img.createdAt).toLocaleDateString()}
                                             </TableCell>
                                             <TableCell className="text-right">
@@ -266,41 +268,45 @@ export default function AdminResourceGallery() {
                             </Table>
                         </div>
 
-                        {/* Mobile View: Cards */}
-                        <div className="md:hidden grid gap-4 p-4">
+                        {/* Mobile/Tablet View: Cards */}
+                        <div className="lg:hidden grid gap-4 grid-cols-1 sm:grid-cols-2 p-4">
                             {filteredImages.map((img) => (
-                                <Card key={img.id} className="p-4 flex gap-4 items-center">
-                                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-md bg-muted flex items-center justify-center">
+                                <Card key={img.id} className="p-4 flex gap-4 items-start">
+                                    <div className="h-20 w-20 shrink-0 overflow-hidden rounded-md bg-muted flex items-center justify-center border">
                                         {img.imageUrl ? (
                                             <img src={img.imageUrl} alt={img.title} className="h-full w-full object-cover" />
                                         ) : (
-                                            <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                                            <ImageIcon className="h-8 w-8 text-muted-foreground" />
                                         )}
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="font-semibold truncate">{img.title}</h3>
-                                        <p className="text-xs text-muted-foreground">
-                                            {new Date(img.createdAt).toLocaleDateString()}
-                                        </p>
+                                    <div className="flex-1 min-w-0 flex flex-col h-full justify-between py-0.5">
+                                        <div className="space-y-1">
+                                            <h3 className="font-semibold text-base leading-tight line-clamp-2">{img.title}</h3>
+                                            <p className="text-xs text-muted-foreground">
+                                                {new Date(img.createdAt).toLocaleDateString()}
+                                            </p>
+                                        </div>
+                                        <div className="flex justify-end mt-2">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                                        <MoreVertical className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onClick={() => startEditing(img)}>
+                                                        <Edit className="mr-2 h-4 w-4" /> Edit
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() => handleDelete(img.id)}
+                                                        className="text-destructive focus:text-destructive"
+                                                    >
+                                                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
                                     </div>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="-mr-2">
-                                                <MoreVertical className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => startEditing(img)}>
-                                                <Edit className="mr-2 h-4 w-4" /> Edit
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                                onClick={() => handleDelete(img.id)}
-                                                className="text-destructive focus:text-destructive"
-                                            >
-                                                <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
                                 </Card>
                             ))}
                         </div>
@@ -310,15 +316,15 @@ export default function AdminResourceGallery() {
 
             {/* Add/Edit Dialog */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="max-w-4xl h-[90vh] md:max-h-[85vh] flex flex-col p-0 gap-0 sm:rounded-lg overflow-hidden">
-                    <DialogHeader className="px-6 py-4 border-b shrink-0">
+                <DialogContent className="w-[95vw] max-w-4xl h-[90vh] md:max-h-[85vh] flex flex-col p-0 gap-0 sm:rounded-lg overflow-hidden">
+                    <DialogHeader className="px-4 md:px-6 py-4 border-b shrink-0">
                         <DialogTitle>{editingId ? "Edit Resource" : "Add New Resource"}</DialogTitle>
                         <DialogDescription>
                             {editingId ? "Update the resource details below" : "Create a new educational resource"}
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="flex-1 overflow-y-auto px-6 py-4">
+                    <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4">
                         <form id="resource-form" onSubmit={handleSubmit} className="space-y-6">
                             <div className="grid gap-4">
                                 <div className="grid gap-2">
@@ -351,12 +357,12 @@ export default function AdminResourceGallery() {
 
                                 <div className="grid gap-2">
                                     <Label htmlFor="description">Content</Label>
-                                    <div className="h-[400px]">
+                                    <div className="h-[250px] md:h-[400px]">
                                         <RichTextEditor
                                             value={description}
                                             onChange={setDescription}
                                             placeholder="Write your content here..."
-                                            className="h-[350px]"
+                                            className="h-[200px] md:h-[350px]"
                                         />
                                     </div>
                                 </div>
@@ -364,11 +370,11 @@ export default function AdminResourceGallery() {
                         </form>
                     </div>
 
-                    <DialogFooter className="px-6 py-4 border-t bg-background shrink-0 gap-2 sm:gap-0">
-                        <Button type="button" variant="outline" onClick={resetForm}>
+                    <DialogFooter className="px-4 md:px-6 py-4 border-t bg-background shrink-0 flex-col sm:flex-row gap-2 sm:gap-0">
+                        <Button type="button" variant="outline" onClick={resetForm} className="sm:mr-2 w-full sm:w-auto">
                             Cancel
                         </Button>
-                        <Button type="submit" form="resource-form" disabled={uploading}>
+                        <Button type="submit" form="resource-form" disabled={uploading} className="w-full sm:w-auto">
                             {uploading ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
