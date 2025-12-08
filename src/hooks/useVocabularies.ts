@@ -16,7 +16,7 @@ import { dexieService } from "@/lib/dexieDb";
 import { useState, useEffect } from "react";
 
 const SYNC_KEY = 'vocabularies';
-const CACHE_DURATION_MINUTES = 3; // Reduced to 5 minutes for better auto-sync
+const CACHE_DURATION_MINUTES = 10; // Increased to 10 minutes for better efficiency
 
 export const useVocabularies = () => {
     const queryClient = useQueryClient();

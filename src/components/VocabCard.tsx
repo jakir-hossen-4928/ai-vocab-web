@@ -17,7 +17,7 @@ interface VocabCardProps {
   index?: number;
   onDelete?: (id: string) => void;
   onImproveMeaning?: (id: string) => Promise<void>;
-  onTranslate?: (vocab: Vocabulary) => void;
+
   isAdmin?: boolean;
   style?: React.CSSProperties;
   className?: string;
@@ -45,7 +45,6 @@ export const VocabCard = memo(({
   onClick,
   onDelete,
   onImproveMeaning,
-  onTranslate,
   isAdmin = false,
   style,
   className
@@ -187,7 +186,7 @@ export const VocabCard = memo(({
             >
               <Volume2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Button>
-            {vocab.isOnline && onTranslate && (
+            {vocab.isOnline && (
               <Button
                 variant="ghost"
                 size="icon"

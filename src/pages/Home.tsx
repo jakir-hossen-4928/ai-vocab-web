@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Search, Sparkles, Zap, Loader2, X, Globe, Mic, Languages } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -43,6 +43,7 @@ export default function Home() {
   // Modal State
   const [selectedVocab, setSelectedVocab] = useState<Vocabulary | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [displayCount, setDisplayCount] = useState(20);
 
   const [model, setModel] = useState<string | null>(getSelectedModel() || null);
 
@@ -85,6 +86,7 @@ export default function Home() {
     }
 
     setSearchParams(params, { replace: true });
+    setDisplayCount(20); // Reset display count on new search
   }, [debouncedSearch, setSearchParams]);
 
   // Search online dictionary when no local results
@@ -130,11 +132,14 @@ export default function Home() {
   const clearSearch = () => {
     setSearchQuery("");
     setOnlineResults([]);
+    setDisplayCount(20);
   };
 
-  const vocabularies = [...(data || [])].sort((a, b) => {
-    return safeTimestamp(b.createdAt) - safeTimestamp(a.createdAt);
-  });
+  const vocabularies = useMemo(() => {
+    return [...(data || [])].sort((a, b) => {
+      return safeTimestamp(b.createdAt) - safeTimestamp(a.createdAt);
+    });
+  }, [data]);
 
   const handleImproveMeaning = async (id: string) => {
     const vocab = vocabularies.find(v => v.id === id);
@@ -154,18 +159,17 @@ export default function Home() {
     setIsChatOpen(true);
   };
 
-  const handleTranslate = (vocab: Vocabulary) => {
-    // Translation is now handled inline in VocabCard
-    // This function is kept for compatibility but does nothing
-  };
 
-  const filteredVocabs = debouncedSearch.trim()
-    ? vocabularies.filter(v =>
-      v.bangla.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-      v.english.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-      v.partOfSpeech.toLowerCase().includes(debouncedSearch.toLowerCase())
-    )
-    : vocabularies.slice(0, 8);
+
+  const filteredVocabs = useMemo(() => {
+    return debouncedSearch.trim()
+      ? vocabularies.filter(v =>
+        v.bangla.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        v.english.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        v.partOfSpeech.toLowerCase().includes(debouncedSearch.toLowerCase())
+      )
+      : vocabularies.slice(0, 8);
+  }, [debouncedSearch, vocabularies]);
 
   // Combine local and online results
   const allResults = [...filteredVocabs, ...onlineResults];
@@ -325,7 +329,7 @@ export default function Home() {
 
               {hasResults ? (
                 <div className="grid gap-3 px-4 sm:px-0">
-                  {allResults.map((vocab, index) => (
+                  {allResults.slice(0, displayCount).map((vocab, index) => (
                     <VocabCard
                       key={vocab.id}
                       vocab={vocab}
@@ -344,9 +348,18 @@ export default function Home() {
                         }
                       }}
                       onImproveMeaning={vocab.isOnline ? undefined : handleImproveMeaning}
-                      onTranslate={vocab.isOnline ? handleTranslate : undefined}
                     />
                   ))}
+                  {allResults.length > displayCount && (
+                    <div className="flex justify-center mt-4">
+                      <button
+                        onClick={() => setDisplayCount(prev => prev + 20)}
+                        className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm font-medium"
+                      >
+                        Load More Results
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="px-4 sm:px-0">
