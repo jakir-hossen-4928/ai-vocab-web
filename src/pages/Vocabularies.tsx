@@ -159,6 +159,17 @@ export default function Vocabularies() {
     }
   }, [user, navigate]);
 
+  // Sync selectedVocab with updated data from cache (e.g. after edit)
+  useEffect(() => {
+    if (selectedVocab && vocabularies.length > 0) {
+      const updatedVocab = vocabularies.find(v => v.id === selectedVocab.id);
+      // Only update if the object reference has changed (meaning data has been updated in cache)
+      if (updatedVocab && updatedVocab !== selectedVocab) {
+        setSelectedVocab(updatedVocab);
+      }
+    }
+  }, [vocabularies, selectedVocab]);
+
   // Initialize Worker
   useEffect(() => {
     workerRef.current = new Worker(new URL("../workers/vocabWorker.ts", import.meta.url), {

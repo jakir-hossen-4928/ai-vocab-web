@@ -8,6 +8,7 @@ import { confirmAction, showSuccessToast } from "@/utils/sweetAlert";
 import { memo, useState } from "react";
 import { translateText } from "@/services/googleTranslateService";
 import { toast } from "sonner";
+import { useNative } from "@/hooks/useNative";
 
 interface VocabCardProps {
   vocab: Vocabulary;
@@ -53,14 +54,17 @@ export const VocabCard = memo(({
   const [showTranslation, setShowTranslation] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
   const [translatedWord, setTranslatedWord] = useState<string>("");
+  const { haptic } = useNative();
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    haptic('light');
     onToggleFavorite(vocab.id);
   };
 
   const handleSpeak = (e: React.MouseEvent) => {
     e.stopPropagation();
+    haptic('light');
     speakText(vocab.english);
   };
 
@@ -74,6 +78,7 @@ export const VocabCard = memo(({
       );
 
       if (isConfirmed) {
+        haptic('success');
         onDelete(vocab.id);
         showSuccessToast('Vocabulary deleted successfully');
       }
@@ -82,11 +87,14 @@ export const VocabCard = memo(({
 
   const handleImprove = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    haptic('light');
     if (onImproveMeaning) {
       setIsImproving(true);
       try {
         await onImproveMeaning(vocab.id);
+        haptic('success');
       } catch (error) {
+        haptic('error');
         console.error("Failed to improve meaning:", error);
       } finally {
         setIsImproving(false);
@@ -96,6 +104,7 @@ export const VocabCard = memo(({
 
   const handleTranslate = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    haptic('light');
 
     if (showTranslation) {
       setShowTranslation(false);
@@ -122,12 +131,11 @@ export const VocabCard = memo(({
     }
   };
 
-  // For online results, vocab.bangla is the definition
-  // When translated, we show the translated WORD in the big text area
   const displayBangla = (showTranslation && translatedWord) ? translatedWord : vocab.bangla;
 
   const banglaTextSize = getBanglaTextSize(displayBangla);
   const englishTextSize = getEnglishTextSize(vocab.english);
+
 
   return (
     <div

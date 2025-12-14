@@ -30,6 +30,7 @@ const AdminTools = lazy(() => import("./admin/AdminTools"));
 const Favorites = lazy(() => import("./pages/Favorites"));
 const DuplicateManager = lazy(() => import("./admin/DuplicateManager"));
 const AdminDashboard = lazy(() => import("./admin/AdminDashboard"));
+const BackendTest = lazy(() => import("./admin/BackendTest"));
 const AdminResourceGallery = lazy(() => import("./admin/ResourceGallery"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const WordChatPage = lazy(() => import("./pages/WordChatPage"));
@@ -98,6 +99,7 @@ const AppRoutes = () => {
           <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
           <Route path="/admin/tools" element={<AdminRoute><AdminTools /></AdminRoute>} />
           <Route path="/admin/duplicates" element={<AdminRoute><DuplicateManager /></AdminRoute>} />
+          <Route path="/admin/test" element={<AdminRoute><BackendTest /></AdminRoute>} />
           <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Route>

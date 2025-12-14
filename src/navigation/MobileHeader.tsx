@@ -1,6 +1,7 @@
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useNative } from "@/hooks/useNative";
 
 interface MobileHeaderProps {
     onMenuClick: () => void;
@@ -9,14 +10,20 @@ interface MobileHeaderProps {
 
 export const MobileHeader = ({ onMenuClick, title = "Ai Vocab" }: MobileHeaderProps) => {
     const navigate = useNavigate();
+    const { haptic } = useNative();
+
+    const handleMenuClick = () => {
+        haptic('light');
+        onMenuClick();
+    };
 
     return (
-        <header className="md:hidden fixed top-0 left-0 right-0 z-40 bg-gradient-to-r from-primary to-blue-600 text-white shadow-lg">
+        <header className="md:hidden fixed top-0 left-0 right-0 z-40 bg-gradient-to-r from-primary to-blue-600 text-white shadow-lg pt-[var(--safe-area-top)]">
             <div className="flex items-center gap-3 px-3 py-2.5">
                 <Button
                     variant="ghost"
                     size="icon"
-                    onClick={onMenuClick}
+                    onClick={handleMenuClick}
                     className="shrink-0 text-white hover:bg-white/20 h-9 w-9"
                 >
                     <Menu className="h-5 w-5" />

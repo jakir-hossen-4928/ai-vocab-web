@@ -7,6 +7,7 @@ import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useNative } from "@/hooks/useNative";
 
 const navItems = [
     { path: "/home", icon: Home, label: "Home" },
@@ -24,9 +25,11 @@ interface MobileDrawerProps {
 
 export const MobileDrawer = ({ open, onOpenChange }: MobileDrawerProps) => {
     const { isAdmin } = useAuth();
+    const { haptic } = useNative();
     const navigate = useNavigate();
 
     const handleSignOut = async () => {
+        haptic('light');
         try {
             await signOut(auth);
             toast.success("Signed out successfully");
@@ -45,7 +48,7 @@ export const MobileDrawer = ({ open, onOpenChange }: MobileDrawerProps) => {
                 onOpenAutoFocus={(e) => e.preventDefault()}
             >
                 {/* Header */}
-                <div className="p-6 border-b bg-gradient-to-br from-primary/10 to-blue-50 dark:from-primary/5 dark:to-blue-950/20">
+                <div className="p-6 pt-[calc(1.5rem+var(--safe-area-top))] border-b bg-gradient-to-br from-primary/10 to-blue-50 dark:from-primary/5 dark:to-blue-950/20">
                     <h1
                         onClick={() => {
                             navigate("/");
@@ -212,7 +215,7 @@ export const MobileDrawer = ({ open, onOpenChange }: MobileDrawerProps) => {
                 </nav>
 
                 {/* Sign Out */}
-                <div className="p-3 border-t mt-auto">
+                <div className="p-3 pb-[calc(0.75rem+var(--safe-area-bottom))] border-t mt-auto">
                     <button
                         onClick={handleSignOut}
                         className="flex w-full items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"

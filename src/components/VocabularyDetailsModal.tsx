@@ -18,6 +18,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { useState, useEffect } from "react";
 import { useVocabularyMutations } from "@/hooks/useVocabularies";
 import { confirmAction, showSuccessToast, showErrorToast } from "@/utils/sweetAlert";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Plus, Trash2 } from "lucide-react";
+import PARTS_OF_SPEECH from "@/data/partOfSpeech.json";
 
 interface VocabularyDetailsModalProps {
     vocabulary: Vocabulary | null;
@@ -226,13 +235,47 @@ export function VocabularyDetailsModal({
 
                             <div className="flex flex-col gap-4">
                                 <div className="flex items-center gap-3 flex-wrap">
-                                    <Badge className="text-sm px-3 py-1 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm">
-                                        {vocabulary.partOfSpeech}
-                                    </Badge>
-                                    {vocabulary.pronunciation && (
-                                        <span className="text-sm text-muted-foreground font-mono bg-background/50 px-3 py-1 rounded-full border shadow-sm backdrop-blur-sm">
-                                            {vocabulary.pronunciation}
-                                        </span>
+                                    {isEditing && editedVocab ? (
+                                        <>
+                                            <Select
+                                                value={editedVocab.partOfSpeech}
+                                                onValueChange={(value) => setEditedVocab({
+                                                    ...editedVocab,
+                                                    partOfSpeech: value,
+                                                    verbForms: value === "Verb" && !editedVocab.verbForms
+                                                        ? { base: "", v2: "", v3: "", ing: "", s_es: "" }
+                                                        : editedVocab.verbForms
+                                                })}
+                                            >
+                                                <SelectTrigger className="w-[140px] h-8 text-xs">
+                                                    <SelectValue placeholder="Select type" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {PARTS_OF_SPEECH.map((pos) => (
+                                                        <SelectItem key={pos} value={pos}>
+                                                            {pos}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <Input
+                                                value={editedVocab.pronunciation || ""}
+                                                onChange={(e) => setEditedVocab({ ...editedVocab, pronunciation: e.target.value })}
+                                                placeholder="Pronunciation"
+                                                className="h-8 text-xs w-[200px]"
+                                            />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Badge className="text-sm px-3 py-1 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm">
+                                                {vocabulary.partOfSpeech}
+                                            </Badge>
+                                            {vocabulary.pronunciation && (
+                                                <span className="text-sm text-muted-foreground font-mono bg-background/50 px-3 py-1 rounded-full border shadow-sm backdrop-blur-sm">
+                                                    {vocabulary.pronunciation}
+                                                </span>
+                                            )}
+                                        </>
                                     )}
                                 </div>
 
@@ -298,8 +341,8 @@ export function VocabularyDetailsModal({
                             </div>
                         )}
 
-                        {/* Verb Forms */}
-                        {vocabulary.verbForms && vocabulary.partOfSpeech?.toLowerCase().includes("verb") && vocabulary.verbForms.base && (
+                        {/* Verb Forms - Show if Verb and (has forms OR is editing) */}
+                        {editedVocab && (editedVocab.partOfSpeech === "Verb" || (vocabulary.verbForms && vocabulary.partOfSpeech?.toLowerCase().includes("verb"))) && (
                             <div className="space-y-3">
                                 <h3 className="text-lg font-semibold flex items-center gap-2 text-foreground/80">
                                     <div className="p-1.5 rounded-md bg-orange-500/10 text-orange-500">
@@ -307,48 +350,138 @@ export function VocabularyDetailsModal({
                                     </div>
                                     Verb Forms
                                 </h3>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                                    {[
-                                        { label: "Base", value: vocabulary.verbForms.base },
-                                        { label: "Past (V2)", value: vocabulary.verbForms.v2 },
-                                        { label: "Past Part (V3)", value: vocabulary.verbForms.v3 },
-                                        { label: "Present Part (-ing)", value: vocabulary.verbForms.ing },
-                                        { label: "3rd Person (s/es)", value: vocabulary.verbForms.s_es },
-                                    ].map((form, idx) => (
-                                        <Card key={idx} className="p-3 flex flex-col items-center justify-center text-center bg-background border hover:border-primary/30 hover:shadow-md transition-all duration-200">
-                                            <span className="text-[10px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wider">{form.label}</span>
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="font-semibold text-sm">{form.value}</span>
-                                                <TTSButton text={form.value} className="h-5 w-5" />
+                                {isEditing ? (
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                        {[
+                                            { key: "base", label: "Base" },
+                                            { key: "v2", label: "Past (V2)" },
+                                            { key: "v3", label: "Past Part (V3)" },
+                                            { key: "ing", label: "Present Part (-ing)" },
+                                            { key: "s_es", label: "3rd Person (s/es)" },
+                                        ].map((field) => (
+                                            <div key={field.key} className="space-y-1">
+                                                <label className="text-xs text-muted-foreground">{field.label}</label>
+                                                <Input
+                                                    value={editedVocab.verbForms?.[field.key as keyof typeof editedVocab.verbForms] || ""}
+                                                    onChange={(e) => setEditedVocab({
+                                                        ...editedVocab,
+                                                        verbForms: {
+                                                            ...(editedVocab.verbForms || { base: "", v2: "", v3: "", ing: "", s_es: "" }),
+                                                            [field.key]: e.target.value
+                                                        }
+                                                    })}
+                                                    className="h-8 text-sm"
+                                                    placeholder={field.label}
+                                                />
                                             </div>
-                                        </Card>
-                                    ))}
-                                </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    vocabulary.verbForms && vocabulary.verbForms.base && (
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                                            {[
+                                                { label: "Base", value: vocabulary.verbForms.base },
+                                                { label: "Past (V2)", value: vocabulary.verbForms.v2 },
+                                                { label: "Past Part (V3)", value: vocabulary.verbForms.v3 },
+                                                { label: "Present Part (-ing)", value: vocabulary.verbForms.ing },
+                                                { label: "3rd Person (s/es)", value: vocabulary.verbForms.s_es },
+                                            ].map((form, idx) => (
+                                                <Card key={idx} className="p-3 flex flex-col items-center justify-center text-center bg-background border hover:border-primary/30 hover:shadow-md transition-all duration-200">
+                                                    <span className="text-[10px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wider">{form.label}</span>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="font-semibold text-sm">{form.value}</span>
+                                                        <TTSButton text={form.value} className="h-5 w-5" />
+                                                    </div>
+                                                </Card>
+                                            ))}
+                                        </div>
+                                    )
+                                )}
                             </div>
                         )}
 
                         {/* Examples */}
-                        {vocabulary.examples && vocabulary.examples.length > 0 && (
+                        {(isEditing || (vocabulary.examples && vocabulary.examples.length > 0)) && (
                             <div className="space-y-3">
-                                <h3 className="text-lg font-semibold flex items-center gap-2 text-foreground/80">
-                                    <div className="p-1.5 rounded-md bg-blue-500/10 text-blue-500">
-                                        <BookOpen className="h-4 w-4" />
-                                    </div>
-                                    Examples
-                                </h3>
-                                <div className="grid gap-3">
-                                    {vocabulary.examples.map((example, index) => (
-                                        <Card key={index} className="p-4 bg-background border hover:border-primary/30 hover:shadow-md transition-all duration-200 group">
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div className="space-y-1.5">
-                                                    <p className="text-base font-medium text-foreground/90 leading-snug">{example.en}</p>
-                                                    <p className="text-sm text-muted-foreground">{example.bn}</p>
-                                                </div>
-                                                <TTSButton text={example.en} className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                                            </div>
-                                        </Card>
-                                    ))}
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-lg font-semibold flex items-center gap-2 text-foreground/80">
+                                        <div className="p-1.5 rounded-md bg-blue-500/10 text-blue-500">
+                                            <BookOpen className="h-4 w-4" />
+                                        </div>
+                                        Examples
+                                    </h3>
+                                    {isEditing && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setEditedVocab(prev => ({
+                                                ...prev!,
+                                                examples: [...(prev!.examples || []), { bn: "", en: "" }]
+                                            }))}
+                                            className="h-7 text-xs"
+                                        >
+                                            <Plus className="h-3 w-3 mr-1" /> Add
+                                        </Button>
+                                    )}
                                 </div>
+
+                                {isEditing && editedVocab ? (
+                                    <div className="space-y-3">
+                                        {editedVocab.examples?.map((example, index) => (
+                                            <Card key={index} className="p-4 bg-background border space-y-3 relative group">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="absolute top-2 right-2 h-6 w-6 text-destructive hover:bg-destructive/10"
+                                                    onClick={() => setEditedVocab(prev => ({
+                                                        ...prev!,
+                                                        examples: prev!.examples?.filter((_, i) => i !== index)
+                                                    }))}
+                                                >
+                                                    <Trash2 className="h-3 w-3" />
+                                                </Button>
+                                                <div className="space-y-1">
+                                                    <label className="text-xs font-medium text-muted-foreground">English</label>
+                                                    <Input
+                                                        value={example.en}
+                                                        onChange={(e) => {
+                                                            const newExamples = [...(editedVocab.examples || [])];
+                                                            newExamples[index] = { ...newExamples[index], en: e.target.value };
+                                                            setEditedVocab({ ...editedVocab, examples: newExamples });
+                                                        }}
+                                                        className="h-8"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-xs font-medium text-muted-foreground">Bangla</label>
+                                                    <Input
+                                                        value={example.bn}
+                                                        onChange={(e) => {
+                                                            const newExamples = [...(editedVocab.examples || [])];
+                                                            newExamples[index] = { ...newExamples[index], bn: e.target.value };
+                                                            setEditedVocab({ ...editedVocab, examples: newExamples });
+                                                        }}
+                                                        className="h-8"
+                                                    />
+                                                </div>
+                                            </Card>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="grid gap-3">
+                                        {vocabulary.examples.map((example, index) => (
+                                            <Card key={index} className="p-4 bg-background border hover:border-primary/30 hover:shadow-md transition-all duration-200 group">
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <div className="space-y-1.5">
+                                                        <p className="text-base font-medium text-foreground/90 leading-snug">{example.en}</p>
+                                                        <p className="text-sm text-muted-foreground">{example.bn}</p>
+                                                    </div>
+                                                    <TTSButton text={example.en} className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                                                </div>
+                                            </Card>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -392,55 +525,77 @@ export function VocabularyDetailsModal({
                         )}
 
                         {/* Synonyms & Antonyms */}
-                        {(vocabulary.synonyms?.length > 0 || vocabulary.antonyms?.length > 0) && (
+                        {(isEditing || vocabulary.synonyms?.length > 0 || vocabulary.antonyms?.length > 0) && (
                             <div className="grid sm:grid-cols-2 gap-6 pt-2">
-                                {vocabulary.synonyms && vocabulary.synonyms.length > 0 && (
-                                    <div className="space-y-3">
-                                        <h3 className="text-lg font-semibold flex items-center gap-2 text-foreground/80">
-                                            <div className="p-1.5 rounded-md bg-green-500/10 text-green-500">
-                                                <Copy className="h-4 w-4" />
-                                            </div>
-                                            Synonyms
-                                        </h3>
-                                        <div className="flex flex-wrap gap-2">
-                                            {vocabulary.synonyms.map((synonym, index) => (
-                                                <Badge
-                                                    key={index}
-                                                    variant="secondary"
-                                                    className="pl-3 pr-2 py-1.5 flex items-center gap-2 hover:bg-primary/20 hover:text-primary cursor-pointer transition-all text-sm font-normal group"
-                                                    onClick={() => speakText(synonym)}
-                                                >
-                                                    {synonym}
-                                                    <Volume2 className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                </Badge>
-                                            ))}
+                                <div className="space-y-3">
+                                    <h3 className="text-lg font-semibold flex items-center gap-2 text-foreground/80">
+                                        <div className="p-1.5 rounded-md bg-green-500/10 text-green-500">
+                                            <Copy className="h-4 w-4" />
                                         </div>
-                                    </div>
-                                )}
+                                        Synonyms
+                                    </h3>
+                                    {isEditing && editedVocab ? (
+                                        <Input
+                                            value={editedVocab.synonyms?.join(", ") || ""}
+                                            onChange={(e) => setEditedVocab({
+                                                ...editedVocab,
+                                                synonyms: e.target.value.split(",").map(s => s.trim()).filter(Boolean)
+                                            })}
+                                            placeholder="Comma separated (e.g. happy, joyful)"
+                                        />
+                                    ) : (
+                                        vocabulary.synonyms && vocabulary.synonyms.length > 0 && (
+                                            <div className="flex flex-wrap gap-2">
+                                                {vocabulary.synonyms.map((synonym, index) => (
+                                                    <Badge
+                                                        key={index}
+                                                        variant="secondary"
+                                                        className="pl-3 pr-2 py-1.5 flex items-center gap-2 hover:bg-primary/20 hover:text-primary cursor-pointer transition-all text-sm font-normal group"
+                                                        onClick={() => speakText(synonym)}
+                                                    >
+                                                        {synonym}
+                                                        <Volume2 className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                        )
+                                    )}
+                                </div>
 
-                                {vocabulary.antonyms && vocabulary.antonyms.length > 0 && (
-                                    <div className="space-y-3">
-                                        <h3 className="text-lg font-semibold flex items-center gap-2 text-foreground/80">
-                                            <div className="p-1.5 rounded-md bg-red-500/10 text-red-500">
-                                                <ArrowRightLeft className="h-4 w-4" />
-                                            </div>
-                                            Antonyms
-                                        </h3>
-                                        <div className="flex flex-wrap gap-2">
-                                            {vocabulary.antonyms.map((antonym, index) => (
-                                                <Badge
-                                                    key={index}
-                                                    variant="outline"
-                                                    className="pl-3 pr-2 py-1.5 flex items-center gap-2 hover:bg-destructive/10 hover:text-destructive cursor-pointer transition-all text-sm font-normal group border-destructive/20"
-                                                    onClick={() => speakText(antonym)}
-                                                >
-                                                    {antonym}
-                                                    <Volume2 className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                </Badge>
-                                            ))}
+                                <div className="space-y-3">
+                                    <h3 className="text-lg font-semibold flex items-center gap-2 text-foreground/80">
+                                        <div className="p-1.5 rounded-md bg-red-500/10 text-red-500">
+                                            <ArrowRightLeft className="h-4 w-4" />
                                         </div>
-                                    </div>
-                                )}
+                                        Antonyms
+                                    </h3>
+                                    {isEditing && editedVocab ? (
+                                        <Input
+                                            value={editedVocab.antonyms?.join(", ") || ""}
+                                            onChange={(e) => setEditedVocab({
+                                                ...editedVocab,
+                                                antonyms: e.target.value.split(",").map(s => s.trim()).filter(Boolean)
+                                            })}
+                                            placeholder="Comma separated (e.g. sad, unhappy)"
+                                        />
+                                    ) : (
+                                        vocabulary.antonyms && vocabulary.antonyms.length > 0 && (
+                                            <div className="flex flex-wrap gap-2">
+                                                {vocabulary.antonyms.map((antonym, index) => (
+                                                    <Badge
+                                                        key={index}
+                                                        variant="outline"
+                                                        className="pl-3 pr-2 py-1.5 flex items-center gap-2 hover:bg-destructive/10 hover:text-destructive cursor-pointer transition-all text-sm font-normal group border-destructive/20"
+                                                        onClick={() => speakText(antonym)}
+                                                    >
+                                                        {antonym}
+                                                        <Volume2 className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                        )
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>
