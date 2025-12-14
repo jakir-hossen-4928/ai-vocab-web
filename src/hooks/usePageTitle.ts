@@ -9,7 +9,7 @@ const DEFAULT_TITLE = 'AI Vocabulary';
 const ROUTE_TITLES: Record<string, string> = {
     '/': 'Welcome',
     '/auth': 'Sign In / Sign Up',
-    '/home': 'Dashboard',
+    '/home': 'Home',
     '/profile': 'My Profile',
     '/vocabularies': 'Vocabularies',
     '/vocabularies/add': 'Add Vocabulary',

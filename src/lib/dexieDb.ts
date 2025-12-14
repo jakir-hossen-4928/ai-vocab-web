@@ -380,7 +380,7 @@ export const dexieService = {
 
     async getAllFavorites(): Promise<string[]> {
         try {
-            const favorites = await db.favorites.toArray();
+            const favorites = await db.favorites.orderBy('addedAt').toArray();
             return favorites.map(f => f.id);
         } catch (error) {
             console.error('Failed to get favorites from Dexie:', error);

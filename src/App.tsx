@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { FavoritesProvider } from "@/contexts/FavoritesContext";
 
 import { NetworkStatus } from "@/components/NetworkStatus";
 import { lazy, Suspense } from "react";
@@ -114,14 +115,16 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <NetworkStatus />
-        <BrowserRouter>
-          <AuthProvider>
-            <AppContent />
-          </AuthProvider>
-        </BrowserRouter>
+        <FavoritesProvider>
+          <Toaster />
+          <Sonner />
+          <NetworkStatus />
+          <BrowserRouter>
+            <AuthProvider>
+              <AppContent />
+            </AuthProvider>
+          </BrowserRouter>
+        </FavoritesProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
