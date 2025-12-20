@@ -42,11 +42,6 @@ export async function testDexieDatabase() {
         const sessions = await dexieService.getAllChatSessions();
         console.log(`Chat sessions: ${sessions.length}`);
 
-        // Test 7: Check token usage
-        console.log('\n🎯 Token Usage:');
-        const tokenStats = await dexieService.getTotalTokenUsage();
-        console.log('Total tokens:', tokenStats.totalTokens);
-        console.log('Total requests:', tokenStats.totalRequests);
 
         console.log('\n✅ Dexie Database Test Complete!');
         return true;

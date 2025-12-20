@@ -35,7 +35,6 @@ const AdminResourceGallery = lazy(() => import("./admin/ResourceGallery"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const WordChatPage = lazy(() => import("./pages/WordChatPage"));
 const OnlineDictionary = lazy(() => import("./pages/OnlineDictionary"));
-const AIActivity = lazy(() => import("./openrouterAi/AIActivity"));
 const APIKeySetup = lazy(() => import("./openrouterAi/APIKeySetup"));
 const Flashcards = lazy(() => import("./pages/Flashcards"));
 const DownloadPage = lazy(() => import("./pages/DownloadPage"));
@@ -84,7 +83,6 @@ const AppRoutes = () => {
           <Route path="/resources/:id" element={<ProtectedRoute><ResourceDetail /></ProtectedRoute>} />
           <Route path="/chat/:id" element={<ProtectedRoute><WordChatPage /></ProtectedRoute>} />
           <Route path="/dictionary" element={<ProtectedRoute><OnlineDictionary /></ProtectedRoute>} />
-          <Route path="/ai-activity" element={<ProtectedRoute><AIActivity /></ProtectedRoute>} />
           <Route path="/flashcards" element={<ProtectedRoute><Flashcards /></ProtectedRoute>} />
           <Route path="/api-key-setup" element={<ProtectedRoute><APIKeySetup /></ProtectedRoute>} />
 

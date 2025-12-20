@@ -14,23 +14,10 @@ export interface ChatSession {
     vocabularyId: string;
     vocabularyEnglish: string;
     messages: ChatMessage[];
-    totalTokens: number;
-    totalCost: number;
     createdAt: number;
     updatedAt: number;
 }
 
-export interface TokenUsage {
-    id: string;
-    timestamp: number;
-    vocabularyId: string;
-    vocabularyEnglish: string;
-    promptTokens: number;
-    completionTokens: number;
-    totalTokens: number;
-    model: string;
-    userId?: string;
-}
 
 // Favorites
 export interface Favorite {
@@ -47,6 +34,8 @@ export interface FlashcardProgress {
     incorrectCount: number;
     easeFactor: number; // For spaced repetition
     nextReviewDate: number;
+    interval: number;
+    streak: number;
 }
 
 // Sync metadata to track last sync times
@@ -61,7 +50,6 @@ export class VocabularyDatabase extends Dexie {
     vocabularies!: Table<Vocabulary, string>;
     resources!: Table<GrammarImage, string>;
     chatSessions!: Table<ChatSession, string>;
-    tokenUsage!: Table<TokenUsage, string>;
     favorites!: Table<Favorite, string>;
     flashcardProgress!: Table<FlashcardProgress, string>;
     syncMetadata!: Table<SyncMetadata, string>;
@@ -69,11 +57,10 @@ export class VocabularyDatabase extends Dexie {
     constructor() {
         super('VocabularyAppDB');
 
-        this.version(1).stores({
+        this.version(2).stores({
             vocabularies: 'id, english, bangla, partOfSpeech, createdAt, updatedAt, userId',
             resources: 'id, title, createdAt, userId',
             chatSessions: 'id, vocabularyId, updatedAt',
-            tokenUsage: 'id, timestamp, vocabularyId, userId, model',
             favorites: 'id, addedAt',
             flashcardProgress: 'id, lastReviewed, nextReviewDate',
             syncMetadata: 'key, lastSyncedAt'
@@ -280,83 +267,6 @@ export const dexieService = {
         }
     },
 
-    // ==================== TOKEN USAGE ====================
-    async saveTokenUsage(usage: TokenUsage): Promise<void> {
-        try {
-            await db.tokenUsage.put(usage);
-        } catch (error) {
-            console.error('Failed to save token usage to Dexie:', error);
-        }
-    },
-
-    async getTokenUsageByDateRange(startDate: number, endDate: number): Promise<TokenUsage[]> {
-        try {
-            return await db.tokenUsage
-                .where('timestamp')
-                .between(startDate, endDate, true, true)
-                .toArray();
-        } catch (error) {
-            console.error('Failed to get token usage by date range from Dexie:', error);
-            return [];
-        }
-    },
-
-    async getTokenUsageByUser(userId: string): Promise<TokenUsage[]> {
-        try {
-            return await db.tokenUsage
-                .where('userId')
-                .equals(userId)
-                .toArray();
-        } catch (error) {
-            console.error('Failed to get token usage by user from Dexie:', error);
-            return [];
-        }
-    },
-
-    async getTotalTokenUsage(userId?: string): Promise<{
-        totalPromptTokens: number;
-        totalCompletionTokens: number;
-        totalTokens: number;
-        totalRequests: number;
-    }> {
-        try {
-            const allUsage = userId
-                ? await db.tokenUsage.where('userId').equals(userId).toArray()
-                : await db.tokenUsage.toArray();
-
-            return allUsage.reduce((acc, usage) => ({
-                totalPromptTokens: acc.totalPromptTokens + usage.promptTokens,
-                totalCompletionTokens: acc.totalCompletionTokens + usage.completionTokens,
-                totalTokens: acc.totalTokens + usage.totalTokens,
-                totalRequests: acc.totalRequests + 1,
-            }), {
-                totalPromptTokens: 0,
-                totalCompletionTokens: 0,
-                totalTokens: 0,
-                totalRequests: 0,
-            });
-        } catch (error) {
-            console.error('Failed to get total token usage from Dexie:', error);
-            return {
-                totalPromptTokens: 0,
-                totalCompletionTokens: 0,
-                totalTokens: 0,
-                totalRequests: 0,
-            };
-        }
-    },
-
-    async clearOldTokenUsage(daysToKeep: number = 90): Promise<void> {
-        try {
-            const cutoffDate = Date.now() - (daysToKeep * 24 * 60 * 60 * 1000);
-            await db.tokenUsage
-                .where('timestamp')
-                .below(cutoffDate)
-                .delete();
-        } catch (error) {
-            console.error('Failed to clear old token usage from Dexie:', error);
-        }
-    },
 
     // ==================== FAVORITES ====================
     async addFavorite(vocabularyId: string): Promise<void> {
@@ -492,24 +402,21 @@ export const dexieService = {
     // ==================== UTILITY ====================
     async clearAllData(): Promise<void> {
         try {
-            await db.transaction('rw',
+            await db.transaction('rw', [
                 db.vocabularies,
                 db.resources,
                 db.chatSessions,
-                db.tokenUsage,
                 db.favorites,
                 db.flashcardProgress,
-                db.syncMetadata,
-                async () => {
-                    await db.vocabularies.clear();
-                    await db.resources.clear();
-                    await db.chatSessions.clear();
-                    await db.tokenUsage.clear();
-                    await db.favorites.clear();
-                    await db.flashcardProgress.clear();
-                    await db.syncMetadata.clear();
-                }
-            );
+                db.syncMetadata
+            ], async () => {
+                await db.vocabularies.clear();
+                await db.resources.clear();
+                await db.chatSessions.clear();
+                await db.favorites.clear();
+                await db.flashcardProgress.clear();
+                await db.syncMetadata.clear();
+            });
         } catch (error) {
             console.error('Failed to clear all data from Dexie:', error);
         }
@@ -521,7 +428,6 @@ export const dexieService = {
                 vocabularies: await db.vocabularies.toArray(),
                 resources: await db.resources.toArray(),
                 chatSessions: await db.chatSessions.toArray(),
-                tokenUsage: await db.tokenUsage.toArray(),
                 favorites: await db.favorites.toArray(),
                 flashcardProgress: await db.flashcardProgress.toArray(),
             };
@@ -536,7 +442,6 @@ export const dexieService = {
         vocabularies: number;
         resources: number;
         chatSessions: number;
-        tokenUsage: number;
         favorites: number;
         flashcardProgress: number;
     }> {
@@ -545,7 +450,6 @@ export const dexieService = {
                 vocabularies: await db.vocabularies.count(),
                 resources: await db.resources.count(),
                 chatSessions: await db.chatSessions.count(),
-                tokenUsage: await db.tokenUsage.count(),
                 favorites: await db.favorites.count(),
                 flashcardProgress: await db.flashcardProgress.count(),
             };
@@ -555,7 +459,6 @@ export const dexieService = {
                 vocabularies: 0,
                 resources: 0,
                 chatSessions: 0,
-                tokenUsage: 0,
                 favorites: 0,
                 flashcardProgress: 0,
             };
@@ -563,5 +466,3 @@ export const dexieService = {
     }
 };
 
-// Export types
-export type { ChatMessage, ChatSession, TokenUsage, Favorite, FlashcardProgress, SyncMetadata };

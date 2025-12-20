@@ -15,7 +15,6 @@ const navItems = [
     { path: "/flashcards", icon: Layers, label: "Flashcards" },
     { path: "/dictionary", icon: Globe, label: "Dictionary" },
     { path: "/resources", icon: GraduationCap, label: "Resources" },
-    { path: "/ai-activity", icon: Activity, label: "AI Activity" },
     { path: "/profile", icon: User, label: "Profile" },
 ];
 

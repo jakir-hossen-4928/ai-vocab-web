@@ -55,35 +55,24 @@ export const getSelectedModel = (): string | null => {
 
 // Chat Sessions
 export interface ChatMessage {
-    role: 'user' | 'assistant';
+    role: "user" | "assistant";
     content: string;
+    reasoning_details?: string;
     timestamp: number;
-    tokens?: {
-        input: number;
-        output: number;
-        total: number;
-    };
-    cost?: number;
-    reasoning_details?: any;
 }
 
 export interface ChatSession {
     id: string;
     vocabularyId: string;
-    vocabularyWord: string;
+    vocabularyEnglish: string;
     messages: ChatMessage[];
-    totalTokens: number;
-    totalCost: number;
     createdAt: number;
     updatedAt: number;
 }
 
 export const saveChatSession = async (session: ChatSession): Promise<void> => {
     try {
-        await chatStorageService.saveChatSession({
-            ...session,
-            vocabularyEnglish: session.vocabularyWord
-        });
+        await chatStorageService.saveChatSession(session);
     } catch (error) {
         console.error('Failed to save chat session:', error);
     }
@@ -94,7 +83,7 @@ export const getAllChatSessions = async (): Promise<ChatSession[]> => {
         const sessions = await chatStorageService.getAllChatSessions();
         return sessions.map(s => ({
             ...s,
-            vocabularyWord: s.vocabularyEnglish
+            vocabularyEnglish: s.vocabularyEnglish // Ensure consistency with interface
         }));
     } catch (error) {
         console.error('Failed to retrieve chat sessions:', error);
@@ -110,7 +99,7 @@ export const getChatSessionByVocabulary = async (vocabularyId: string): Promise<
             const s = sessions[0];
             return {
                 ...s,
-                vocabularyWord: s.vocabularyEnglish
+                vocabularyEnglish: s.vocabularyEnglish // Ensure consistency with interface
             };
         }
         return null;
@@ -125,78 +114,6 @@ export const deleteChatSession = async (sessionId: string): Promise<void> => {
         await chatStorageService.deleteChatSession(sessionId);
     } catch (error) {
         console.error('Failed to delete chat session:', error);
-    }
-};
-
-// Token Usage Tracking
-export interface TokenUsageRecord {
-    id: string;
-    timestamp: number;
-    vocabularyId: string;
-    vocabularyWord: string;
-    modelId: string;
-    inputTokens: number;
-    outputTokens: number;
-    totalTokens: number;
-    cost: number;
-    userId?: string; // Added for compatibility with Dexie
-}
-
-export const saveTokenUsage = async (record: TokenUsageRecord): Promise<void> => {
-    try {
-        // Map to Dexie TokenUsage format
-        await chatStorageService.saveTokenUsage({
-            id: record.id,
-            timestamp: record.timestamp,
-            vocabularyId: record.vocabularyId,
-            vocabularyEnglish: record.vocabularyWord,
-            promptTokens: record.inputTokens,
-            completionTokens: record.outputTokens,
-            totalTokens: record.totalTokens,
-            model: record.modelId,
-            userId: record.userId
-        });
-    } catch (error) {
-        console.error('Failed to save token usage:', error);
-    }
-};
-
-export const getAllTokenUsage = async (): Promise<TokenUsageRecord[]> => {
-    try {
-        const usage = await chatStorageService.getTokenUsageByDateRange(0, Date.now());
-        // Map back to TokenUsageRecord format
-        return usage.map(u => ({
-            id: u.id,
-            timestamp: u.timestamp,
-            vocabularyId: u.vocabularyId,
-            vocabularyWord: u.vocabularyEnglish,
-            modelId: u.model,
-            inputTokens: u.promptTokens,
-            outputTokens: u.completionTokens,
-            totalTokens: u.totalTokens,
-            cost: 0, // Cost is calculated dynamically in Dexie service or UI
-            userId: u.userId
-        }));
-    } catch (error) {
-        console.error('Failed to retrieve token usage:', error);
-        return [];
-    }
-};
-
-export const getTotalSpending = async (): Promise<{ totalCost: number; totalTokens: number; recordCount: number }> => {
-    try {
-        const stats = await chatStorageService.getTotalTokenUsage();
-        // Calculate estimated cost (approximate)
-        const totalCost = (stats.totalTokens / 1000000) * 0.15; // $0.15 per 1M tokens avg
-
-        return {
-            totalCost,
-            totalTokens: stats.totalTokens,
-            recordCount: stats.totalRequests
-        };
-    } catch (error) {
-        console.error('Failed to calculate total spending:', error);
-        return { totalCost: 0, totalTokens: 0, recordCount: 0 };
     }
 };
 

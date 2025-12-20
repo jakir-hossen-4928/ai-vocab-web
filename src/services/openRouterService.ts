@@ -263,6 +263,5 @@ If the user asks for examples, provide them with Bangla translations.
     return {
         content: choice.message.content,
         reasoning_details: choice.message.reasoning_details, // Return reasoning details
-        usage: result.usage
     };
 };

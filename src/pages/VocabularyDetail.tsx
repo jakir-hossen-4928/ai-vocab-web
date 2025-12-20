@@ -7,16 +7,18 @@ import { Vocabulary } from "@/types/vocabulary";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Volume2, Trash2, Heart, Loader2, Edit } from "lucide-react";
+import { ArrowLeft, Volume2, Trash2, Heart, Loader2, Edit, Share2 } from "lucide-react";
 import { speakText } from "@/services/ttsService";
 import { useVocabularies, useVocabularyMutations } from "@/hooks/useVocabularies";
 import { useFavorites } from "@/hooks/useFavorites";
 import { confirmAction, showSuccessToast, showErrorToast } from "@/utils/sweetAlert";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { useVocabularyShare } from "@/hooks/useVocabularyShare";
+import { ShareableVocabularyCard } from "@/components/ShareableVocabularyCard";
+import { useNative } from "@/hooks/useNative";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSwipe } from "@/hooks/useSwipe";
-import { AnimatePresence } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 
 const SwipeHint = ({ onDismiss }: { onDismiss: () => void }) => (
@@ -56,7 +58,8 @@ export default function VocabularyDetail() {
 
   const isMobile = useIsMobile();
   const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
-  const [showSwipeHint, setShowSwipeHint] = useState(true);
+  const { haptic } = useNative();
+  const { shareAsImage, shareRef, itemToShare, isSharing: isSharingImage } = useVocabularyShare();
 
   // Hide hint after delay
   useEffect(() => {
@@ -131,6 +134,13 @@ export default function VocabularyDetail() {
     showSuccessToast(isFavorite ? "Removed from favorites" : "Added to favorites");
   };
 
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!vocab) return;
+    haptic('light');
+    shareAsImage(vocab);
+  };
+
   const handleDelete = async () => {
     if (!id || !isAdmin) return;
 
@@ -187,6 +197,20 @@ export default function VocabularyDetail() {
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleShare}
+                    className="text-primary-foreground hover:bg-primary-foreground/10"
+                    title="Share as Image"
+                    disabled={isSharingImage}
+                  >
+                    {isSharingImage ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Share2 className="h-5 w-5" />
+                    )}
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -452,6 +476,25 @@ export default function VocabularyDetail() {
           </AnimatePresence>
         )
       }
+
+      {/* Hidden view for sharing as image */}
+      {itemToShare && (
+        <div
+          style={{
+            position: 'fixed',
+            left: '0',
+            top: '0',
+            width: '450px',
+            opacity: '0',
+            pointerEvents: 'none',
+            zIndex: -1,
+            overflow: 'hidden',
+            backgroundColor: 'white'
+          }}
+        >
+          <ShareableVocabularyCard ref={shareRef} item={itemToShare} />
+        </div>
+      )}
     </div >
   );
 }

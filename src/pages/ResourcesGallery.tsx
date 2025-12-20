@@ -1,6 +1,7 @@
-import { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useResourcesSimple } from "@/hooks/useResources";
+import { useDebounce } from "@/hooks/useDebounce";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -43,11 +44,14 @@ export default function ResourcesGallery() {
   // Use Dexie-backed resources with 15-minute cache
   const { data: images = [], isLoading: loading } = useResourcesSimple();
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "title">("newest");
-  const [dateFilter, setDateFilter] = useState<"all" | "today" | "week" | "month" | "custom">("all");
-  const [customStartDate, setCustomStartDate] = useState("");
-  const [customEndDate, setCustomEndDate] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "title">((searchParams.get("sort") as any) || "newest");
+  const [dateFilter, setDateFilter] = useState<"all" | "today" | "week" | "month" | "custom">((searchParams.get("date") as any) || "all");
+  const [customStartDate, setCustomStartDate] = useState(searchParams.get("start") || "");
+  const [customEndDate, setCustomEndDate] = useState(searchParams.get("end") || "");
+
+  const debouncedSearch = useDebounce(searchQuery, 300);
 
   // Virtual scrolling ref
   const parentRef = useRef<HTMLDivElement>(null);
@@ -57,7 +61,34 @@ export default function ResourcesGallery() {
     setDateFilter("all");
     setCustomStartDate("");
     setCustomEndDate("");
+    setSearchQuery("");
   };
+
+  // Sync state with URL
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams);
+
+    if (debouncedSearch) params.set("search", debouncedSearch);
+    else params.delete("search");
+
+    if (sortBy !== "newest") params.set("sort", sortBy);
+    else params.delete("sort");
+
+    if (dateFilter !== "all") params.set("date", dateFilter);
+    else params.delete("date");
+
+    if (dateFilter === "custom") {
+      if (customStartDate) params.set("start", customStartDate);
+      else params.delete("start");
+      if (customEndDate) params.set("end", customEndDate);
+      else params.delete("end");
+    } else {
+      params.delete("start");
+      params.delete("end");
+    }
+
+    setSearchParams(params, { replace: true });
+  }, [debouncedSearch, sortBy, dateFilter, customStartDate, customEndDate, setSearchParams]);
 
   // Date filtering helper
   const isWithinDateRange = (createdAt: string) => {

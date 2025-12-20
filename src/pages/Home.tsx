@@ -231,12 +231,12 @@ export default function Home() {
               >
                 <Search className="absolute left-4 h-5 w-5 text-muted-foreground pointer-events-none" />
                 <Input
-                  placeholder="Search your vocabulary..."
+                  placeholder={window.innerWidth < 640 ? "Search..." : "Search your vocabulary..."}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => setIsSearchFocused(true)}
                   onBlur={() => setIsSearchFocused(false)}
-                  className={`w-full pl-12 h-12 sm:h-14 text-base border-0 bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/70 ${searchQuery ? 'pr-[6.5rem] sm:pr-[7.5rem]' : 'pr-[4.5rem] sm:pr-[5.5rem]'
+                  className={`w-full pl-10 sm:pl-12 h-11 sm:h-14 text-sm sm:text-base border-0 bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/70 ${searchQuery ? 'pr-[6.8rem] sm:pr-[8.5rem]' : 'pr-[4.8rem] sm:pr-[6rem]'
                     }`}
                 />
 
@@ -248,7 +248,7 @@ export default function Home() {
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.8 }}
                       onClick={clearSearch}
-                      className="absolute right-[4.5rem] sm:right-[5.5rem] p-1.5 rounded-full hover:bg-slate-100 text-muted-foreground transition-colors z-10"
+                      className="absolute right-[5rem] sm:right-[6.5rem] p-1.5 rounded-full hover:bg-slate-100 text-muted-foreground transition-colors z-10"
                       aria-label="Clear search"
                     >
                       <X className="h-4 w-4 sm:h-5 sm:w-5" />

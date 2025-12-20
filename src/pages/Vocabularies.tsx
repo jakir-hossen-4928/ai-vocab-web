@@ -420,13 +420,13 @@ export default function Vocabularies() {
           {/* Search and Filter Bar */}
           {/* Search and Filter Bar */}
           <div className="flex gap-1.5 sm:gap-2">
-            <div className="relative flex-1 group">
-              <Search className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-4 sm:w-4 text-primary-foreground/50 group-focus-within:text-primary-foreground transition-colors pointer-events-none" />
+            <div className="relative flex-1 group bg-white shadow-lg rounded-xl flex items-center transition-all duration-200 focus-within:ring-2 focus-within:ring-white/20">
+              <Search className="absolute left-3 sm:left-4 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground/60 transition-colors pointer-events-none" />
               <Input
-                placeholder="Search words..."
+                placeholder={window.innerWidth < 640 ? "Search..." : "Search words..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className={`pl-8 sm:pl-10 bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/50 focus-visible:ring-primary-foreground/30 h-11 sm:h-12 text-sm transition-all ${searchQuery ? 'pr-[6.5rem] sm:pr-32' : 'pr-[5rem] sm:pr-24'
+                className={`pl-9 sm:pl-12 bg-transparent border-0 text-foreground placeholder:text-muted-foreground/50 focus-visible:ring-0 h-10 sm:h-12 text-xs sm:text-sm transition-all ${searchQuery ? 'pr-[6.5rem] sm:pr-36' : 'pr-[4.8rem] sm:pr-28'
                   }`}
               />
 
@@ -434,7 +434,7 @@ export default function Vocabularies() {
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-[5rem] sm:right-[6.5rem] top-1/2 -translate-y-1/2 p-1.5 rounded-full hover:bg-primary-foreground/10 text-primary-foreground/50 hover:text-primary-foreground transition-colors z-10"
+                  className="absolute right-[5.2rem] sm:right-[7.2rem] top-1/2 -translate-y-1/2 p-1.5 rounded-full hover:bg-slate-100 text-muted-foreground/50 hover:text-foreground transition-colors z-10"
                   aria-label="Clear search"
                 >
                   <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -447,11 +447,11 @@ export default function Vocabularies() {
                   onClick={toggleLanguage}
                   className="
                     flex items-center justify-center
-                    px-1.5 sm:px-2 h-6 sm:h-8 min-w-[26px] sm:min-w-[36px]
-                    text-[9px] sm:text-xs font-bold
+                    px-1 h-5.5 sm:h-8 min-w-[24px] sm:min-w-[36px]
+                    text-[8px] sm:text-xs font-bold
                     rounded-full transition-all duration-200
-                    bg-primary-foreground/10 hover:bg-primary-foreground/20
-                    text-primary-foreground border-0 sm:border border-primary-foreground/10
+                    bg-slate-100/80 hover:bg-slate-200/80
+                    text-muted-foreground/80 border-0 sm:border border-slate-200
                     active:scale-95 select-none shadow-sm
                   "
                   title={`Switch language (Current: ${language === 'en-US' ? 'English' : 'Bangla'})`}
@@ -466,10 +466,10 @@ export default function Vocabularies() {
                   disabled={isListening}
                   className={`
                     flex items-center justify-center rounded-full transition-all duration-300
-                    h-6 w-6 sm:h-8 sm:w-8
+                    h-5.5 w-5.5 sm:h-8 sm:w-8
                     ${isListening
                       ? 'bg-red-500 text-white shadow-lg scale-110'
-                      : 'text-primary-foreground/60 hover:text-primary-foreground hover:bg-primary-foreground/10'
+                      : 'text-muted-foreground/60 hover:text-foreground hover:bg-slate-100'
                     }
                   `}
                   aria-label="Voice search"
@@ -482,8 +482,8 @@ export default function Vocabularies() {
 
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="secondary" className="bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 border-primary-foreground/20 relative h-11 sm:h-12 w-11 sm:w-12 p-0 flex-shrink-0">
-                  <Filter className="h-4 w-4" />
+                <Button variant="secondary" className="bg-white shadow-lg text-foreground hover:bg-slate-50 border-0 relative h-10 sm:h-12 w-10 sm:w-12 p-0 flex-shrink-0">
+                  <Filter className="h-4 w-4 text-muted-foreground" />
                   {activeFiltersCount > 0 && (
                     <span className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 bg-red-500 rounded-full border-2 border-primary text-[10px] sm:text-xs flex items-center justify-center font-bold text-white">{activeFiltersCount}</span>
                   )}

@@ -9,7 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Volume2, BookOpen, MessageSquare, Activity, Layers, ArrowRightLeft, Copy, Heart, Edit, ChevronLeft, ChevronRight } from "lucide-react";
+import { Volume2, BookOpen, MessageSquare, Activity, Layers, ArrowRightLeft, Copy, Heart, Edit, ChevronLeft, ChevronRight, Share2, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { speakText } from "@/services/ttsService";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -27,6 +27,8 @@ import {
 } from "@/components/ui/select";
 import { Plus, Trash2 } from "lucide-react";
 import PARTS_OF_SPEECH from "@/data/partOfSpeech.json";
+import { useVocabularyShare } from "@/hooks/useVocabularyShare";
+import { ShareableVocabularyCard } from "./ShareableVocabularyCard";
 
 interface VocabularyDetailsModalProps {
     vocabulary: Vocabulary | null;
@@ -73,6 +75,7 @@ export function VocabularyDetailsModal({
     const [isEditing, setIsEditing] = useState(false);
     const [editedVocab, setEditedVocab] = useState<Vocabulary | null>(null);
     const { updateVocabulary } = useVocabularyMutations();
+    const { shareAsImage, shareRef, itemToShare, isSharing: isSharingImage } = useVocabularyShare();
 
     useEffect(() => {
         if (vocabulary) {
@@ -190,6 +193,20 @@ export function VocabularyDetailsModal({
                                                 <Heart className={`h-5 w-5 ${isFavorite ? "fill-destructive text-destructive" : "text-muted-foreground"}`} />
                                             </Button>
                                         )}
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => shareAsImage(vocabulary)}
+                                            className="h-9 w-9 rounded-full bg-background/50 hover:bg-background shadow-sm backdrop-blur-sm"
+                                            title="Share as Image"
+                                            disabled={isSharingImage}
+                                        >
+                                            {isSharingImage ? (
+                                                <Loader2 className="h-4 w-4 text-primary animate-spin" />
+                                            ) : (
+                                                <Share2 className="h-5 w-5 text-muted-foreground" />
+                                            )}
+                                        </Button>
                                         {isAdmin && (
                                             <>
                                                 <Button
@@ -600,6 +617,24 @@ export function VocabularyDetailsModal({
                         )}
                     </div>
                 </ScrollArea>
+                {/* Hidden view for sharing as image */}
+                {itemToShare && (
+                    <div
+                        style={{
+                            position: 'fixed',
+                            left: '0',
+                            top: '0',
+                            width: '450px',
+                            opacity: '0',
+                            pointerEvents: 'none',
+                            zIndex: 1000,
+                            overflow: 'hidden',
+                            backgroundColor: 'white'
+                        }}
+                    >
+                        <ShareableVocabularyCard ref={shareRef} item={itemToShare} />
+                    </div>
+                )}
             </DialogContent>
         </Dialog>
     );

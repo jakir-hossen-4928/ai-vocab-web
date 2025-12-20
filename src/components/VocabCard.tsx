@@ -1,4 +1,4 @@
-import { Volume2, Heart, Trash2, Sparkles, Loader2, Languages, X } from "lucide-react";
+import { Volume2, Heart, Trash2, Sparkles, Loader2, Languages, X, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,8 @@ import { memo, useState } from "react";
 import { translateText } from "@/services/googleTranslateService";
 import { toast } from "sonner";
 import { useNative } from "@/hooks/useNative";
+import { useVocabularyShare } from "@/hooks/useVocabularyShare";
+import { ShareableVocabularyCard } from "./ShareableVocabularyCard";
 
 interface VocabCardProps {
   vocab: Vocabulary;
@@ -55,6 +57,13 @@ export const VocabCard = memo(({
   const [isTranslating, setIsTranslating] = useState(false);
   const [translatedWord, setTranslatedWord] = useState<string>("");
   const { haptic } = useNative();
+  const { shareAsImage, shareRef, itemToShare, isSharing: isSharingImage } = useVocabularyShare();
+
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    haptic('light');
+    shareAsImage(vocab);
+  };
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -210,6 +219,20 @@ export const VocabCard = memo(({
                 )}
               </Button>
             )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleShare}
+              className="h-7 w-7 sm:h-8 sm:w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+              title="Share as Image"
+              disabled={isSharingImage}
+            >
+              {isSharingImage ? (
+                <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
+              ) : (
+                <Share2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              )}
+            </Button>
             {!vocab.isOnline && (
               <Button
                 variant="ghost"
@@ -243,6 +266,25 @@ export const VocabCard = memo(({
           </p>
         )}
       </Card>
+
+      {/* Hidden view for sharing as image */}
+      {itemToShare && (
+        <div
+          style={{
+            position: 'fixed',
+            left: '0',
+            top: '0',
+            width: '450px',
+            opacity: '0',
+            pointerEvents: 'none',
+            zIndex: -1,
+            overflow: 'hidden',
+            backgroundColor: 'white' // Ensure background is solid for capture
+          }}
+        >
+          <ShareableVocabularyCard ref={shareRef} item={itemToShare} />
+        </div>
+      )}
     </div>
   );
 });

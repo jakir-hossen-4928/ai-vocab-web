@@ -62,13 +62,12 @@ const TranslateButton: React.FC<TranslateButtonProps> = ({ text, className = "" 
                 title="Translate to Bangla"
             >
                 {isTranslating ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                    <>
-                        <Languages className="h-3 w-3" />
-                        <span className="flag-icon">🇧🇩</span>
-
-                    </>
+                    <div className="flex items-center gap-1.5">
+                        <Languages className="h-3.5 w-3.5" />
+                        <span className="text-[10px] font-bold tracking-tight">BN</span>
+                    </div>
                 )}
             </button>
 

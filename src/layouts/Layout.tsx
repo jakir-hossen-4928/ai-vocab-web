@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { Sidebar } from "@/navigation/Sidebar";
 import { BottomNav } from "@/navigation/BottomNav";
 import { MobileDrawer } from "@/navigation/MobileDrawer";
@@ -34,6 +34,8 @@ export const Layout = () => {
             clearInterval(interval);
         };
     }, []);
+
+    const location = useLocation();
 
     return (
         <div className="min-h-screen bg-background">

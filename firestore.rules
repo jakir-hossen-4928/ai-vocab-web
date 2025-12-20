@@ -39,9 +39,6 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
-    // Notification Tokens collection
-    match /notificationTokens/{userId} {
-      allow read, write: if isAuthenticated() && request.auth.uid == userId;
-    }
+   
   }
 }

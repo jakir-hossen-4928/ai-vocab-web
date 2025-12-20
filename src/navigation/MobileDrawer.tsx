@@ -15,7 +15,6 @@ const navItems = [
     { path: "/vocabularies", icon: BookOpen, label: "Vocabulary" },
     { path: "/favorites", icon: Heart, label: "Favorites" },
     { path: "/flashcards", icon: Layers, label: "Flashcards" },
-    { path: "/ai-activity", icon: Activity, label: "AI Activity" },
 ];
 
 interface MobileDrawerProps {

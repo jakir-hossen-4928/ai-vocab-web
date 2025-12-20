@@ -10,69 +10,60 @@
 .translate-trigger-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: #f0fdf4; /* Light green bg */
-  border: 1px solid #bbf7d0;
-  color: #15803d; /* Green text */
-  padding: 4px 10px;
-  border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 600;
+  justify-content: center;
+  background: rgba(var(--primary-rgb), 0.05);
+  border: 1px solid rgba(var(--primary-rgb), 0.1);
+  color: var(--primary);
+  padding: 4px 8px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  margin-left: 8px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-left: 6px;
   line-height: 1;
 }
 
 .translate-trigger-btn:hover {
-  background: #dcfce7;
+  background: rgba(var(--primary-rgb), 0.1);
+  border-color: rgba(var(--primary-rgb), 0.2);
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .translate-trigger-btn.active {
-  background: #16a34a;
+  background: var(--primary);
   color: white;
-  border-color: #16a34a;
-}
-
-.flag-icon {
-  font-size: 14px;
-  line-height: 1;
-}
-
-.btn-label {
-  font-family: 'Hind Siliguri', 'Noto Sans Bengali', sans-serif;
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.2);
 }
 
 /* The Translation Card (Result) */
 .translation-card {
   display: block;
-  margin-top: 12px;
-  background: linear-gradient(to right bottom, #ffffff, #f0fdf4);
-  border: 1px solid #86efac;
-  border-radius: 12px;
+  margin-top: 10px;
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
   padding: 0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  animation: slideDown 0.3s ease-out;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
   width: 100%;
-  min-width: 280px; /* Ensure it's not too squashed */
-  max-width: 600px; /* Prevent it from being too wide on large screens if inline */
+  min-width: 260px;
+}
 
-  /* Important: If the parent is flex/inline, we might want this to break out.
-     But since we are refactoring usage to be block-friendly, this is fine.
-     If used inside a flex row, it might need width adjustments. */
+:host-context(.dark) .translation-card,
+.dark .translation-card {
+  background: #18181b;
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 @keyframes slideDown {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(-4px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -80,28 +71,35 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  background: rgba(22, 163, 74, 0.1);
-  border-bottom: 1px solid rgba(22, 163, 74, 0.1);
+  padding: 10px 14px;
+  background: rgba(var(--primary-rgb), 0.03);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.dark .translation-header {
+  background: rgba(var(--primary-rgb), 0.05);
+  border-bottom-color: rgba(255, 255, 255, 0.05);
 }
 
 .lang-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: #15803d;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--primary);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .close-icon-btn {
   background: none;
   border: none;
-  color: #6b7280;
+  color: #a1a1aa;
   cursor: pointer;
   font-size: 14px;
   padding: 4px;
-  border-radius: 50%;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -113,11 +111,19 @@
   color: #ef4444;
 }
 
+.dark .close-icon-btn:hover {
+  background: rgba(255,255,255,0.05);
+}
+
 .translation-body {
-  padding: 12px 16px;
-  font-size: 16px;
+  padding: 16px 20px;
+  font-size: 17px;
   line-height: 1.6;
-  color: #1f2937;
+  color: #27272a;
   font-family: 'Hind Siliguri', 'Noto Sans Bengali', sans-serif;
   font-weight: 500;
+}
+
+.dark .translation-body {
+  color: #e4e4e7;
 }

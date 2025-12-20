@@ -27,13 +27,7 @@ export function OpenRouterApiKeyManager() {
         setIsKeySaved(!!getOpenRouterApiKey());
         const savedModel = getSelectedModel();
         if (savedModel) setSelectedModel(savedModel);
-        updateSpending();
     }, []);
-
-    const updateSpending = async () => {
-        const stats = await getTotalSpending();
-        setSpending(stats);
-    };
 
     const handleSave = () => {
         const trimmedKey = apiKey.trim();
@@ -134,9 +128,6 @@ export function OpenRouterApiKeyManager() {
                                 <SelectItem key={model.id} value={model.id}>
                                     <div className="flex items-center justify-between w-full">
                                         <span>{model.name}</span>
-                                        <span className="text-xs text-muted-foreground ml-2">
-                                            Free
-                                        </span>
                                     </div>
                                 </SelectItem>
                             ))}
@@ -146,51 +137,11 @@ export function OpenRouterApiKeyManager() {
                     {selectedModelData && (
                         <div className="mt-3 p-3 bg-muted/50 rounded-lg space-y-2">
                             <p className="text-xs text-muted-foreground">{selectedModelData.description}</p>
-                            <div className="flex items-center gap-4 text-xs">
-                                <div className="flex items-center gap-1">
-                                    <DollarSign className="h-3 w-3 text-green-600" />
-                                    <span>Input: Free</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                    <DollarSign className="h-3 w-3 text-blue-600" />
-                                    <span>Output: Free</span>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <Zap className="h-3 w-3" />
-                                <span>Context: {selectedModelData.contextWindow.toLocaleString()} tokens</span>
-                            </div>
                         </div>
                     )}
                 </div>
             </Card>
 
-            {/* Usage Statistics */}
-            <Card className="p-4 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20">
-                <div className="space-y-2">
-                    <h3 className="font-semibold text-sm flex items-center gap-2">
-                        <DollarSign className="h-4 w-4" />
-                        Total Spending (All Time)
-                    </h3>
-                    <div className="grid grid-cols-3 gap-3">
-                        <div className="text-center p-2 bg-white/50 dark:bg-black/20 rounded">
-                            <p className="text-xs text-muted-foreground">Cost</p>
-                            <p className="text-lg font-bold text-green-600">{formatCost(spending.totalCost)}</p>
-                        </div>
-                        <div className="text-center p-2 bg-white/50 dark:bg-black/20 rounded">
-                            <p className="text-xs text-muted-foreground">Tokens</p>
-                            <p className="text-lg font-bold text-blue-600">{spending.totalTokens.toLocaleString()}</p>
-                        </div>
-                        <div className="text-center p-2 bg-white/50 dark:bg-black/20 rounded">
-                            <p className="text-xs text-muted-foreground">Requests</p>
-                            <p className="text-lg font-bold text-purple-600">{spending.recordCount}</p>
-                        </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground text-center mt-2">
-                        💡 All data stored locally on your device
-                    </p>
-                </div>
-            </Card>
         </div>
     );
 }

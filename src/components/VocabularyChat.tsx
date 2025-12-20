@@ -5,12 +5,11 @@ import {
     hasOpenRouterApiKey,
     getChatSessionByVocabulary,
     saveChatSession,
-    saveTokenUsage,
     getSelectedModel,
     ChatSession,
     ChatMessage as StoredChatMessage
 } from "@/openrouterAi/apiKeyStorage"
-import { calculateCost, getModelById, DEFAULT_MODEL } from "@/openrouterAi/openRouterConfig"
+import { getModelById, DEFAULT_MODEL } from "@/openrouterAi/openRouterConfig"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Bot, X } from "lucide-react"
@@ -29,8 +28,6 @@ interface VocabularyChatProps {
 
 export function VocabularyChat({ vocabulary, onClose, initialPrompt, isPageMode = false, model }: VocabularyChatProps) {
     const [needsApiKey, setNeedsApiKey] = useState(false)
-    const [sessionId] = useState(`vocab-${vocabulary.id}-${Date.now()}`)
-    const [sessionStats, setSessionStats] = useState({ tokens: 0, cost: 0 })
     const [isMobile, setIsMobile] = useState(false)
     const [messages, setMessages] = useState<ConversationMessage[]>([])
     const [isLoading, setIsLoading] = useState(false)
@@ -63,10 +60,6 @@ export function VocabularyChat({ vocabulary, onClose, initialPrompt, isPageMode 
         const loadSession = async () => {
             const existingSession = await getChatSessionByVocabulary(vocabulary.id)
             if (existingSession) {
-                setSessionStats({
-                    tokens: existingSession.totalTokens,
-                    cost: existingSession.totalCost
-                })
 
                 // Convert stored messages to conversation messages
                 const conversationMessages: ConversationMessage[] = existingSession.messages.map((msg, idx) => ({
@@ -111,12 +104,6 @@ export function VocabularyChat({ vocabulary, onClose, initialPrompt, isPageMode 
                 getSelectedModel() || undefined
             )
 
-            // Calculate cost if usage data is available
-            let cost = 0
-            if (result.usage) {
-                const modelId = getSelectedModel() || DEFAULT_MODEL
-                cost = calculateCost(result.usage.promptTokens, result.usage.completionTokens, modelId)
-            }
 
             // Add assistant message
             const assistantMsg: ConversationMessage = {
@@ -127,12 +114,6 @@ export function VocabularyChat({ vocabulary, onClose, initialPrompt, isPageMode 
             }
             setMessages(prev => [...prev, assistantMsg])
 
-            // Update stats
-            const newTokens = result.usage?.totalTokens || 0
-            setSessionStats(prev => ({
-                tokens: prev.tokens + newTokens,
-                cost: prev.cost + cost
-            }))
 
             // Save session
             const existingSession = await getChatSessionByVocabulary(vocabulary.id)
@@ -148,12 +129,6 @@ export function VocabularyChat({ vocabulary, onClose, initialPrompt, isPageMode 
                 role: "assistant",
                 content: result.content,
                 timestamp: Date.now(),
-                tokens: result.usage ? {
-                    input: result.usage.promptTokens,
-                    output: result.usage.completionTokens,
-                    total: result.usage.totalTokens
-                } : undefined,
-                cost,
                 reasoning_details: result.reasoning_details // Store reasoning details
             }
 
@@ -162,30 +137,12 @@ export function VocabularyChat({ vocabulary, onClose, initialPrompt, isPageMode 
             const session: ChatSession = {
                 id: `chat-${vocabulary.id}`,
                 vocabularyId: vocabulary.id,
-                vocabularyWord: vocabulary.english,
+                vocabularyEnglish: vocabulary.english,
                 messages: updatedMessages,
-                totalTokens: (existingSession?.totalTokens || 0) + newTokens,
-                totalCost: (existingSession?.totalCost || 0) + cost,
                 createdAt: existingSession?.createdAt || Date.now(),
                 updatedAt: Date.now()
             }
             await saveChatSession(session)
-
-            // Save usage record
-            if (result.usage) {
-                const modelId = getSelectedModel() || DEFAULT_MODEL
-                await saveTokenUsage({
-                    id: `usage-${Date.now()}-${Math.random()}`,
-                    timestamp: Date.now(),
-                    vocabularyId: vocabulary.id,
-                    vocabularyWord: vocabulary.english,
-                    modelId: modelId,
-                    inputTokens: result.usage.promptTokens,
-                    outputTokens: result.usage.completionTokens,
-                    totalTokens: result.usage.totalTokens,
-                    cost
-                })
-            }
 
         } catch (error: any) {
             console.error('Chat error:', error)
