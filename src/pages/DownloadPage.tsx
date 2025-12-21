@@ -14,7 +14,7 @@ import { useNavigate } from "react-router-dom";
 export default function DownloadPage() {
     const navigate = useNavigate();
 
-    const androidUrl = "https://github.com/jakir-hossen-4928/ai-vocab-expo-app/releases/download/v2.0.0/ai-vocab-web.apk";
+    const androidUrl = "https://github.com/jakir-hossen-4928/ai-vocab-web/releases/download/app/ai-vicab-web.apk";
 
     return (
         <div className="min-h-screen relative font-sans text-foreground selection:bg-primary/10 overflow-x-hidden">
