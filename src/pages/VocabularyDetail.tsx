@@ -60,11 +60,13 @@ export default function VocabularyDetail() {
   const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
   const { haptic } = useNative();
   const { shareAsImage, shareRef, itemToShare, isSharing: isSharingImage } = useVocabularyShare();
+  const [showSwipeHint, setShowSwipeHint] = useState(false);
 
-  // Hide hint after delay
+  // Show hint on mobile once
   useEffect(() => {
     if (isMobile) {
-      const timer = setTimeout(() => setShowSwipeHint(false), 3000);
+      setShowSwipeHint(true);
+      const timer = setTimeout(() => setShowSwipeHint(false), 2500);
       return () => clearTimeout(timer);
     }
   }, [isMobile]);

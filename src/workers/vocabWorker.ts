@@ -14,14 +14,28 @@ self.onmessage = (e: MessageEvent<FilterPayload>) => {
     const { vocabularies, searchQuery, selectedPos, sortOrder, showFavorites, favorites } = e.data;
 
     const filtered = vocabularies.filter((v) => {
-        // Search query
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
-            const matchesSearch =
+            const matchesPrimary =
                 v.bangla.toLowerCase().includes(query) ||
                 v.english.toLowerCase().includes(query) ||
-                v.partOfSpeech.toLowerCase().includes(query);
-            if (!matchesSearch) return false;
+                (v.partOfSpeech && v.partOfSpeech.toLowerCase().includes(query)) ||
+                (v.synonyms && v.synonyms.some(s => s.toLowerCase().includes(query)));
+
+            const matchesRelated = v.relatedWords && v.relatedWords.some(rw =>
+                rw.word.toLowerCase().includes(query) ||
+                rw.meaning.toLowerCase().includes(query)
+            );
+
+            const matchesVerbForms = v.verbForms && (
+                (v.verbForms.base && v.verbForms.base.toLowerCase().includes(query)) ||
+                (v.verbForms.v2 && v.verbForms.v2.toLowerCase().includes(query)) ||
+                (v.verbForms.v3 && v.verbForms.v3.toLowerCase().includes(query)) ||
+                (v.verbForms.ing && v.verbForms.ing.toLowerCase().includes(query)) ||
+                (v.verbForms.s_es && v.verbForms.s_es.toLowerCase().includes(query))
+            );
+
+            if (!matchesPrimary && !matchesRelated && !matchesVerbForms) return false;
         }
 
         // Part of Speech

@@ -1,11 +1,11 @@
-import { Volume2, Heart, Trash2, Sparkles, Loader2, Languages, X, Share2 } from "lucide-react";
+import { Volume2, Heart, Trash2, Sparkles, Loader2, Languages, X, Share2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Vocabulary } from "@/types/vocabulary";
 import { speakText } from "@/services/ttsService";
 import { confirmAction, showSuccessToast } from "@/utils/sweetAlert";
-import { memo, useState } from "react";
+import React, { memo, useState } from "react";
 import { translateText } from "@/services/googleTranslateService";
 import { toast } from "sonner";
 import { useNative } from "@/hooks/useNative";
@@ -22,6 +22,7 @@ interface VocabCardProps {
   onImproveMeaning?: (id: string) => Promise<void>;
 
   isAdmin?: boolean;
+  searchQuery?: string;
   style?: React.CSSProperties;
   className?: string;
 }
@@ -36,9 +37,9 @@ const getBanglaTextSize = (text: string) => {
 
 const getEnglishTextSize = (text: string) => {
   const length = text.length;
-  if (length > 50) return "text-xs sm:text-sm md:text-base";
-  if (length > 30) return "text-sm sm:text-base md:text-lg";
-  return "text-sm sm:text-lg md:text-xl";
+  if (length > 50) return "text-sm sm:text-base md:text-lg";
+  if (length > 30) return "text-base sm:text-lg md:text-xl";
+  return "text-base sm:text-xl md:text-2xl";
 };
 
 export const VocabCard = memo(({
@@ -49,6 +50,7 @@ export const VocabCard = memo(({
   onDelete,
   onImproveMeaning,
   isAdmin = false,
+  searchQuery,
   style,
   className
 }: VocabCardProps) => {
@@ -145,126 +147,188 @@ export const VocabCard = memo(({
   const banglaTextSize = getBanglaTextSize(displayBangla);
   const englishTextSize = getEnglishTextSize(vocab.english);
 
+  // Deep search match detection
+  const lowerQuery = searchQuery?.toLowerCase().trim();
+
+  const matchedRelated = lowerQuery ? vocab.relatedWords?.find(rw =>
+    rw.word.toLowerCase().includes(lowerQuery) ||
+    rw.meaning.toLowerCase().includes(lowerQuery)
+  ) : null;
+
+  const matchedVerbForm = lowerQuery && vocab.verbForms ? Object.entries(vocab.verbForms).find(([key, value]) =>
+    value.toLowerCase().includes(lowerQuery)
+  ) : null;
+
 
   return (
     <div
       style={style}
-      className={className}
+      className={`${className} group/card`}
     >
       <Card
-        className="p-3 sm:p-4 md:p-5 cursor-pointer hover:shadow-hover transition-all duration-300 bg-vocab-card hover:bg-vocab-card-hover h-full flex flex-col justify-between"
+        className="relative p-5 sm:p-6 md:p-8 cursor-pointer border-slate-200/60 dark:border-zinc-800/60 hover:border-primary/30 transition-all duration-300 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm hover:shadow-xl hover:shadow-primary/5 h-full flex flex-col group"
         onClick={onClick}
       >
-        <div className="flex justify-between items-start mb-2 sm:mb-3 gap-2">
-          <div className="flex-1 min-w-0 pr-1">
-            <div className="flex items-start sm:items-center gap-1 sm:gap-2 mb-1 sm:mb-1.5 flex-wrap">
-              <h3 className={`${banglaTextSize} font-bold text-foreground break-words leading-tight flex items-center gap-2`}>
+        {/* Hover Highlight Gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+        <div className="relative flex flex-col h-full z-10">
+          <div className="flex justify-between items-start mb-3 gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <Badge
+                  variant="outline"
+                  className="bg-primary/5 text-primary border-primary/20 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5"
+                >
+                  {vocab.partOfSpeech}
+                </Badge>
+                {onImproveMeaning && !vocab.isOnline && (
+                  <button
+                    className="p-1 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                    onClick={handleImprove}
+                    disabled={isImproving}
+                    title="Chat with AI"
+                  >
+                    {isImproving ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3 w-3" />
+                    )}
+                  </button>
+                )}
+              </div>
+
+              <h3 className={`${banglaTextSize} font-bold text-foreground leading-relaxed flex items-center gap-2 group-hover:text-primary transition-colors duration-300`}>
                 {displayBangla}
                 {isTranslating && (
-                  <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
+                  <Loader2 className="h-4 w-4 text-primary animate-spin" />
                 )}
               </h3>
-              {onImproveMeaning && !vocab.isOnline && (
+
+              <div className="mt-1 flex items-baseline gap-2 flex-wrap">
+                <p className={`${englishTextSize} text-primary font-bold tracking-normal leading-relaxed`}>
+                  {vocab.english}
+                </p>
+                {vocab.pronunciation && (
+                  <p className="text-[11px] sm:text-xs text-muted-foreground/70 font-medium italic">
+                    [{vocab.pronunciation}]
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Top Right Desktop Actions */}
+            <div className="hidden sm:flex gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleSpeak}
+                className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-all active:scale-95"
+                aria-label="Speak word"
+              >
+                <Volume2 className="h-4 w-4" />
+              </Button>
+              {vocab.isOnline && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-5 w-5 sm:h-6 sm:w-6 -ml-0.5 text-muted-foreground flex-shrink-0"
-                  onClick={handleImprove}
-                  disabled={isImproving}
-                  title="Chat with AI for improved meaning"
+                  onClick={handleTranslate}
+                  className={`h-8 w-8 rounded-full transition-all active:scale-95 ${showTranslation ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 'text-primary hover:bg-primary/10'}`}
+                  disabled={isTranslating}
+                  aria-label={showTranslation ? "Hide translation" : "Show translation"}
                 >
-                  {isImproving ? (
-                    <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-3 w-3 sm:h-4 sm:w-4" />
-                  )}
+                  {showTranslation ? <X className="h-4 w-4" /> : <Languages className="h-4 w-4" />}
                 </Button>
               )}
-              <Badge variant="secondary" className="text-[9px] sm:text-[10px] md:text-xs flex-shrink-0 px-1.5 sm:px-2 py-0.5">
-                {vocab.partOfSpeech}
-              </Badge>
             </div>
-            <p className={`${englishTextSize} text-primary font-medium break-words leading-snug`}>
-              {vocab.english}
-            </p>
-            {vocab.pronunciation && (
-              <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground mt-0.5 sm:mt-1 break-words leading-tight">
-                {vocab.pronunciation}
-              </p>
-            )}
           </div>
-          <div className="flex gap-0.5 sm:gap-1 flex-shrink-0 flex-col sm:flex-row">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleSpeak}
-              className="h-7 w-7 sm:h-8 sm:w-8"
-              title="Speak"
-            >
-              <Volume2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            </Button>
-            {vocab.isOnline && (
+
+
+
+          {/* Deep Search Match Context */}
+          {(matchedRelated || matchedVerbForm) && (
+            <div className="mb-4 p-2.5 rounded-xl bg-slate-50/80 dark:bg-zinc-800/50 border border-slate-100 dark:border-zinc-800 group-hover:border-primary/20 transition-colors">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Badge variant="secondary" className="bg-primary/10 text-primary border-0 text-[9px] font-black uppercase tracking-widest px-1.5 py-0">
+                  {matchedRelated ? 'Related Word' : 'Verb Form'}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between gap-2 overflow-hidden">
+                <div className="flex items-center gap-2 flex-1">
+                  <span className="text-sm font-bold text-foreground leading-normal">
+                    {matchedRelated ? matchedRelated.word : (matchedVerbForm as any)[1]}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground/70 leading-normal">
+                    {matchedRelated ? matchedRelated.meaning : vocab.bangla}
+                  </span>
+                </div>
+                <Search className="h-3 w-3 text-primary/30 flex-shrink-0" />
+              </div>
+            </div>
+          )}
+
+          {/* Bottom Actions Row */}
+          <div className="mt-auto pt-3 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between">
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleShare}
+                className="h-9 px-2 sm:px-4 text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50/50 rounded-lg gap-1.5 transition-all"
+                disabled={isSharingImage}
+                aria-label="Share vocabulary card"
+              >
+                {isSharingImage ? <Loader2 className="h-3 w-3 animate-spin" /> : <Share2 className="h-3 w-3" />}
+                <span className="xs:inline">Share</span>
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-1">
+              {/* Mobile Speak Button */}
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={handleTranslate}
-                className={`h-7 w-7 sm:h-8 sm:w-8 ${showTranslation ? 'bg-blue-100 text-blue-700' : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50'}`}
-                title={showTranslation ? "Show original" : "Show Bangla meaning"}
-                disabled={isTranslating}
+                onClick={handleSpeak}
+                className="sm:hidden h-9 w-9 rounded-full hover:bg-primary/10"
+                aria-label="Speak word"
               >
-                {showTranslation ? (
-                  <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                ) : (
-                  <Languages className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                )}
+                <Volume2 className="h-4 w-4" />
               </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleShare}
-              className="h-7 w-7 sm:h-8 sm:w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
-              title="Share as Image"
-              disabled={isSharingImage}
-            >
-              {isSharingImage ? (
-                <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
-              ) : (
-                <Share2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+
+              {!vocab.isOnline && (
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleFavorite(vocab.id);
+                    }}
+                    className={`h-9 w-9 rounded-full transition-colors ${isFavorite ? "text-red-500 bg-red-50 dark:bg-red-500/10" : "text-muted-foreground hover:text-red-500 hover:bg-red-50"}`}
+                    aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+                  >
+                    <Heart className={`h-4 w-4 ${isFavorite ? "fill-current" : ""}`} />
+                  </Button>
+
+                  {isAdmin && onDelete && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(vocab.id);
+                      }}
+                      className="h-9 w-9 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                      aria-label="Delete vocabulary"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               )}
-            </Button>
-            {!vocab.isOnline && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleFavoriteClick}
-                className="h-7 w-7 sm:h-8 sm:w-8"
-                title={isFavorite ? "Remove from favorites" : "Add to favorites"}
-              >
-                <Heart
-                  className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isFavorite ? "fill-destructive text-destructive" : ""}`}
-                />
-              </Button>
-            )}
-            {isAdmin && onDelete && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleDelete}
-                className="h-7 w-7 sm:h-8 sm:w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                title="Delete"
-              >
-                <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </Button>
-            )}
+            </div>
           </div>
         </div>
-
-        {vocab.explanation && (
-          <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground line-clamp-2 break-words mt-auto leading-relaxed">
-            {vocab.explanation}
-          </p>
-        )}
       </Card>
 
       {/* Hidden view for sharing as image */}

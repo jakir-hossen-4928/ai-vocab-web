@@ -9,9 +9,12 @@ const navItems = [
   { path: "/profile", icon: User, label: "Profile" },
 ];
 
-export const BottomNav = () => {
+export const BottomNav = ({ isKeyboardOpen }: { isKeyboardOpen?: boolean }) => {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 safe-bottom md:hidden pb-[var(--safe-area-bottom)]">
+    <nav
+      className={`fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 safe-bottom md:hidden pb-[var(--safe-area-bottom)] transition-all duration-300 transform ${isKeyboardOpen ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'
+        }`}
+    >
       <div className="flex justify-around items-center h-16 max-w-lg mx-auto px-2">
         {navItems.map((item) => (
           <NavLink

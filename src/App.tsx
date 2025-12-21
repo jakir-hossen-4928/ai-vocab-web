@@ -8,13 +8,14 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 import { FavoritesProvider } from "@/contexts/FavoritesContext";
 
 import { NetworkStatus } from "@/components/NetworkStatus";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import Auth from "./authentication/Auth";
 import { Layout } from "@/layouts/Layout";
 import { LandingLayout } from "@/layouts/LandingLayout";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 import { AdminRoute } from "@/routes/AdminRoute";
+import { syncService } from "@/services/syncService";
 
 // Lazy load pages
 const Home = lazy(() => import("./pages/Home"));
@@ -134,8 +135,13 @@ const App = () => {
 // Separate component to use hooks that exist inside the providers (like Router)
 const AppContent = () => {
   usePageTitle();
+
+  useEffect(() => {
+    // Start background synchronization
+    syncService.startSyncManager();
+  }, []);
+
   return <AppRoutes />;
 }
-
 
 export default App;

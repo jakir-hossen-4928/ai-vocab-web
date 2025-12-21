@@ -124,6 +124,8 @@ export default function OnlineDictionary() {
             searchInputRef.current?.blur();
         } else {
             setSearchParams({});
+            setIsInputFocused(false);
+            searchInputRef.current?.blur();
         }
     };
 
@@ -137,7 +139,7 @@ export default function OnlineDictionary() {
     };
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] dark:bg-black flex flex-col pb-20 overflow-x-hidden">
+        <div className="min-h-screen bg-[#F8FAFC] dark:bg-black flex flex-col pb-32 overflow-x-hidden">
             {/* Elegant Header with Floating Search */}
             <header className="sticky top-[calc(52px+var(--safe-area-top))] md:top-0 z-50 w-full bg-white dark:bg-black md:bg-white/80 md:dark:bg-black/80 md:backdrop-blur-xl border-b border-border/40 pb-4 shadow-sm">
                 <div className="max-w-4xl mx-auto px-4 pt-4">
@@ -162,28 +164,35 @@ export default function OnlineDictionary() {
                                 isInputFocused ? "border-primary ring-4 ring-primary/10" : "border-border/60"
                             )}>
                                 <div className="pl-4 pr-1 py-3 flex items-center justify-center text-muted-foreground">
-                                    <Search className={cn("h-5 w-5 transition-colors", isInputFocused ? "text-primary" : "")} />
+                                    <Search className={cn("h-5 w-5 transition-colors", isInputFocused ? "text-primary" : "text-foreground/80")} />
                                 </div>
                                 <Input
                                     ref={searchInputRef}
-                                    type="text"
+                                    type="search"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     onFocus={() => setIsInputFocused(true)}
                                     onBlur={() => setTimeout(() => setIsInputFocused(false), 200)}
                                     placeholder="Search any word..."
-                                    className="border-0 bg-transparent focus-visible:ring-0 text-base md:text-lg h-12 flex-1 pl-1"
+                                    className="border-0 bg-transparent focus-visible:ring-0 text-base md:text-lg h-12 flex-1 pl-1 text-foreground placeholder:text-muted-foreground"
+                                    enterKeyHint="search"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.currentTarget.blur();
+                                        }
+                                    }}
                                 />
                                 {searchQuery && (
                                     <button
                                         type="button"
-                                        onClick={() => {
+                                        onClick={(e) => {
                                             setSearchQuery("");
                                             setSearchParams({});
+                                            (e.currentTarget.closest('.relative')?.querySelector('input') as HTMLInputElement)?.blur();
                                         }}
                                         className="p-2 mr-1 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 text-muted-foreground transition-colors"
                                     >
-                                        <X className="h-4 w-4" />
+                                        <X className="h-4 w-4 text-foreground" />
                                     </button>
                                 )}
                             </div>
@@ -222,6 +231,10 @@ export default function OnlineDictionary() {
                                                 onClick={() => {
                                                     setSearchQuery(word);
                                                     searchWord(word);
+                                                    // Hide keyboard
+                                                    if (document.activeElement instanceof HTMLElement) {
+                                                        document.activeElement.blur();
+                                                    }
                                                 }}
                                                 className="w-full flex items-center justify-between px-4 py-3 rounded-xl hover:bg-muted transition-colors text-left"
                                             >

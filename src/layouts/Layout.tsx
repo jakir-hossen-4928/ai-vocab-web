@@ -5,6 +5,7 @@ import { BottomNav } from "@/navigation/BottomNav";
 import { MobileDrawer } from "@/navigation/MobileDrawer";
 import { MobileHeader } from "@/navigation/MobileHeader";
 import { useNative } from "@/hooks/useNative";
+import { useKeyboard } from "@/hooks/useKeyboard";
 
 export const Layout = () => {
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -13,6 +14,7 @@ export const Layout = () => {
         return saved === 'true';
     });
     const { setStatusBarColor } = useNative();
+    const isKeyboardOpen = useKeyboard();
 
     useEffect(() => {
         // Set native status bar color to primary blue (approx matching #3b82f6)
@@ -23,15 +25,11 @@ export const Layout = () => {
             setSidebarCollapsed(saved === 'true');
         };
 
-        // Listen for changes to localStorage
+        // Listen for changes to localStorage (cross-tab)
         window.addEventListener('storage', handleStorageChange);
-
-        // Also check periodically in case changes happen in the same window
-        const interval = setInterval(handleStorageChange, 100);
 
         return () => {
             window.removeEventListener('storage', handleStorageChange);
-            clearInterval(interval);
         };
     }, []);
 
@@ -48,7 +46,7 @@ export const Layout = () => {
             >
                 <Outlet />
             </main>
-            <BottomNav />
+            <BottomNav isKeyboardOpen={isKeyboardOpen} />
         </div>
     );
 };

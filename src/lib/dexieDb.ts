@@ -44,6 +44,20 @@ export interface SyncMetadata {
     lastSyncedAt: number;
 }
 
+// Search History
+export interface SearchHistory {
+    id?: number;
+    query: string;
+    timestamp: number;
+}
+
+// API Cache for dictionary results
+export interface ApiCache {
+    id: string; // word or query
+    data: Vocabulary;
+    timestamp: number;
+}
+
 // Main Dexie Database
 export class VocabularyDatabase extends Dexie {
     // Tables
@@ -53,17 +67,21 @@ export class VocabularyDatabase extends Dexie {
     favorites!: Table<Favorite, string>;
     flashcardProgress!: Table<FlashcardProgress, string>;
     syncMetadata!: Table<SyncMetadata, string>;
+    searchHistory!: Table<SearchHistory, number>;
+    apiCache!: Table<ApiCache, string>;
 
     constructor() {
         super('VocabularyAppDB');
 
-        this.version(2).stores({
+        this.version(3).stores({
             vocabularies: 'id, english, bangla, partOfSpeech, createdAt, updatedAt, userId',
             resources: 'id, title, createdAt, userId',
             chatSessions: 'id, vocabularyId, updatedAt',
             favorites: 'id, addedAt',
             flashcardProgress: 'id, lastReviewed, nextReviewDate',
-            syncMetadata: 'key, lastSyncedAt'
+            syncMetadata: 'key, lastSyncedAt',
+            searchHistory: '++id, query, timestamp',
+            apiCache: 'id, timestamp'
         });
     }
 }
@@ -135,18 +153,54 @@ export const dexieService = {
         }
     },
 
-    async searchVocabularies(query: string): Promise<Vocabulary[]> {
+    async searchVocabularies(query: string, searchType: 'all' | 'related' | 'verbForms' = 'all'): Promise<Vocabulary[]> {
         try {
-            const lowerQuery = query.toLowerCase();
+            const lowerQuery = query.toLowerCase().trim();
+            if (!lowerQuery) return [];
+
             return await db.vocabularies
-                .filter(v =>
-                    v.english.toLowerCase().includes(lowerQuery) ||
-                    v.bangla.toLowerCase().includes(lowerQuery) ||
-                    v.partOfSpeech.toLowerCase().includes(lowerQuery)
-                )
+                .filter(v => {
+                    const matchesPrimary = v.english.toLowerCase().includes(lowerQuery) ||
+                        v.bangla.toLowerCase().includes(lowerQuery) ||
+                        (v.partOfSpeech && v.partOfSpeech.toLowerCase().includes(lowerQuery)) ||
+                        (v.synonyms && v.synonyms.some(s => s.toLowerCase().includes(lowerQuery)));
+
+                    const matchesRelated = v.relatedWords && v.relatedWords.some(rw =>
+                        rw.word.toLowerCase().includes(lowerQuery) ||
+                        rw.meaning.toLowerCase().includes(lowerQuery)
+                    );
+
+                    const matchesVerbForms = v.verbForms && (
+                        (v.verbForms.base && v.verbForms.base.toLowerCase().includes(lowerQuery)) ||
+                        (v.verbForms.v2 && v.verbForms.v2.toLowerCase().includes(lowerQuery)) ||
+                        (v.verbForms.v3 && v.verbForms.v3.toLowerCase().includes(lowerQuery)) ||
+                        (v.verbForms.ing && v.verbForms.ing.toLowerCase().includes(lowerQuery)) ||
+                        (v.verbForms.s_es && v.verbForms.s_es.toLowerCase().includes(lowerQuery))
+                    );
+
+                    if (searchType === 'related') return !!matchesRelated;
+                    if (searchType === 'verbForms') return !!matchesVerbForms;
+
+                    return matchesPrimary || matchesRelated || matchesVerbForms;
+                })
+                .limit(50)
                 .toArray();
         } catch (error) {
             console.error('Failed to search vocabularies in Dexie:', error);
+            return [];
+        }
+    },
+
+    async getPagedVocabularies(offset: number, limit: number): Promise<Vocabulary[]> {
+        try {
+            return await db.vocabularies
+                .orderBy('createdAt')
+                .reverse()
+                .offset(offset)
+                .limit(limit)
+                .toArray();
+        } catch (error) {
+            console.error('Failed to get paged vocabularies from Dexie:', error);
             return [];
         }
     },
@@ -462,6 +516,86 @@ export const dexieService = {
                 favorites: 0,
                 flashcardProgress: 0,
             };
+        }
+    },
+
+    // ==================== SEARCH HISTORY ====================
+    async addSearchHistory(query: string): Promise<void> {
+        try {
+            const trimmedQuery = query.trim().toLowerCase();
+            if (!trimmedQuery) return;
+
+            // Remove existing same query to move it to the top
+            await db.searchHistory.where('query').equals(trimmedQuery).delete();
+
+            await db.searchHistory.add({
+                query: trimmedQuery,
+                timestamp: Date.now()
+            });
+
+            // Keep only latest 20 searches
+            const count = await db.searchHistory.count();
+            if (count > 20) {
+                const oldest = await db.searchHistory.orderBy('timestamp').limit(count - 20).toArray();
+                const ids = oldest.map(o => o.id!).filter(id => id !== undefined);
+                await db.searchHistory.bulkDelete(ids);
+            }
+        } catch (error) {
+            console.error('Failed to add search history to Dexie:', error);
+        }
+    },
+
+    async getSearchHistory(limit: number = 10): Promise<string[]> {
+        try {
+            const history = await db.searchHistory
+                .orderBy('timestamp')
+                .reverse()
+                .limit(limit)
+                .toArray();
+            return history.map(h => h.query);
+        } catch (error) {
+            console.error('Failed to get search history from Dexie:', error);
+            return [];
+        }
+    },
+
+    async clearSearchHistory(): Promise<void> {
+        try {
+            await db.searchHistory.clear();
+        } catch (error) {
+            console.error('Failed to clear search history from Dexie:', error);
+        }
+    },
+
+    // ==================== API CACHE ====================
+    async getCachedWord(word: string): Promise<Vocabulary | undefined> {
+        try {
+            const entry = await db.apiCache.get(word.toLowerCase().trim());
+            if (!entry) return undefined;
+
+            // Optional: Expiration check (e.g., 7 days)
+            const sevenDays = 7 * 24 * 60 * 60 * 1000;
+            if (Date.now() - entry.timestamp > sevenDays) {
+                await db.apiCache.delete(word.toLowerCase().trim());
+                return undefined;
+            }
+
+            return entry.data;
+        } catch (error) {
+            console.error('Failed to get cached word from Dexie:', error);
+            return undefined;
+        }
+    },
+
+    async cacheWord(word: string, data: Vocabulary): Promise<void> {
+        try {
+            await db.apiCache.put({
+                id: word.toLowerCase().trim(),
+                data,
+                timestamp: Date.now()
+            });
+        } catch (error) {
+            console.error('Failed to cache word in Dexie:', error);
         }
     }
 };

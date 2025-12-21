@@ -13,7 +13,8 @@ import {
   Filter,
   SortAsc,
   SortDesc,
-  Calendar
+  Calendar,
+  X
 } from "lucide-react";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { motion } from "framer-motion";
@@ -35,7 +36,7 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { List, AutoSizer, WindowScroller, CellMeasurer, CellMeasurerCache } from "react-virtualized";
 import { cleanTextContent } from "@/utils/textCleaner";
 
 export default function ResourcesGallery() {
@@ -132,8 +133,10 @@ export default function ResourcesGallery() {
   // Filter and sort logic
   const filteredAndSortedImages = images
     .filter((img) => {
-      const matchesSearch = img.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (img.description && img.description.toLowerCase().includes(searchQuery.toLowerCase()));
+      const searchLower = debouncedSearch.toLowerCase();
+      const matchesSearch =
+        img.title.toLowerCase().includes(searchLower) ||
+        (img.description && img.description.toLowerCase().includes(searchLower));
       const matchesDate = isWithinDateRange(img.createdAt);
       return matchesSearch && matchesDate;
     })
@@ -147,16 +150,11 @@ export default function ResourcesGallery() {
       }
     });
 
-  // Virtual scrolling for grid (3 columns)
-  const COLUMNS = 3;
-  const rowCount = Math.ceil(filteredAndSortedImages.length / COLUMNS);
-
-  const rowVirtualizer = useVirtualizer({
-    count: rowCount,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 420, // Estimated row height
-    overscan: 2,
-  });
+  // react-virtualized Cache
+  const cache = useRef(new CellMeasurerCache({
+    fixedWidth: true,
+    defaultHeight: 420,
+  }));
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -178,18 +176,45 @@ export default function ResourcesGallery() {
         </div>
       </motion.header>
 
-      <div className="max-w-6xl mx-auto px-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Search and Filter Bar */}
         <div className="flex gap-3 mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              (e.currentTarget.querySelector('input') as HTMLInputElement)?.blur();
+            }}
+            className="relative flex-1"
+          >
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground/70" />
             <Input
               placeholder="Search resources..."
-              className="pl-9"
+              className="pl-9 pr-10 text-foreground placeholder:text-muted-foreground"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.currentTarget.blur();
+                }
+              }}
+              enterKeyHint="search"
+              type="search"
             />
-          </div>
+            {searchQuery && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-0 h-full w-10 hover:bg-transparent text-foreground"
+                onClick={(e) => {
+                  setSearchQuery("");
+                  (e.currentTarget.closest('.relative')?.querySelector('input') as HTMLInputElement)?.blur();
+                }}
+              >
+                <X className="h-4 w-4 text-foreground" />
+              </Button>
+            )}
+          </form>
 
           {/* Filter Sheet - Bottom Drawer */}
           <Sheet>
@@ -299,8 +324,7 @@ export default function ResourcesGallery() {
           </Sheet>
         </div>
 
-        {/* Resources Grid with Virtual Scrolling */}
-        <div ref={parentRef} className="pb-8" style={{ maxHeight: 'calc(100vh - 280px)', overflow: 'auto' }}>
+        <div className="pb-32 md:pb-8">
           {loading ? (
             <div className="py-12 flex justify-center">
               <LoadingSpinner />
@@ -321,93 +345,103 @@ export default function ResourcesGallery() {
               </Card>
             </motion.div>
           ) : (
-            <div
-              style={{
-                height: `${rowVirtualizer.getTotalSize()}px`,
-                width: '100%',
-                position: 'relative',
-              }}
-            >
-              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                const startIndex = virtualRow.index * COLUMNS;
-                const rowItems = filteredAndSortedImages.slice(startIndex, startIndex + COLUMNS);
+            <WindowScroller>
+              {({ height, isScrolling, onChildScroll, scrollTop }) => (
+                <AutoSizer disableHeight>
+                  {({ width }) => (
+                    <List
+                      autoHeight
+                      height={height}
+                      isScrolling={isScrolling}
+                      onScroll={onChildScroll}
+                      scrollTop={scrollTop}
+                      width={width}
+                      rowCount={Math.ceil(filteredAndSortedImages.length / 3)}
+                      rowHeight={cache.current.rowHeight}
+                      deferredMeasurementCache={cache.current}
+                      rowRenderer={({ index, key, parent, style }) => {
+                        const startIndex = index * 3;
+                        const rowItems = filteredAndSortedImages.slice(startIndex, startIndex + 3);
 
-                return (
-                  <div
-                    key={virtualRow.key}
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: `${virtualRow.size}px`,
-                      transform: `translateY(${virtualRow.start}px)`,
-                    }}
-                  >
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-6">
-                      {rowItems.map((img, colIndex) => {
                         return (
-                          <motion.div
-                            key={img.id}
-                            onClick={() => navigate(`/resources/${img.id}`)}
+                          <CellMeasurer
+                            cache={cache.current}
+                            columnIndex={0}
+                            key={key}
+                            parent={parent}
+                            rowIndex={index}
                           >
-                            <Card className="overflow-hidden h-full flex flex-col hover:shadow-lg transition-shadow cursor-pointer group border-0 bg-card/50 backdrop-blur-sm relative">
-                              <div className="relative aspect-video overflow-hidden bg-muted/30 flex items-center justify-center">
-                                {img.imageUrl ? (
-                                  <>
-                                    <img
-                                      src={img.thumbnailUrl || img.imageUrl}
-                                      alt={img.title}
-                                      className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
-                                      loading="lazy"
-                                    />
-                                    <div className="absolute inset-0 bg-black/5 group-hover:bg-black/0 transition-colors" />
-                                  </>
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-blue-500/20 group-hover:scale-105 transition-transform duration-500">
-                                    <GraduationCap className="h-12 w-12 text-primary/40" />
-                                  </div>
-                                )}
-                              </div>
+                            {({ registerChild }) => (
+                              <div
+                                ref={registerChild as any}
+                                style={style}
+                                className="pb-6"
+                              >
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                                  {rowItems.map((img) => (
+                                    <motion.div
+                                      key={img.id}
+                                      onClick={() => navigate(`/resources/${img.id}`)}
+                                    >
+                                      <Card className="overflow-hidden h-full flex flex-col hover:shadow-lg transition-shadow cursor-pointer group border-0 bg-card/50 backdrop-blur-sm relative">
+                                        <div className="relative aspect-video overflow-hidden bg-muted/30 flex items-center justify-center">
+                                          {img.imageUrl ? (
+                                            <>
+                                              <img
+                                                src={img.thumbnailUrl || img.imageUrl}
+                                                alt={img.title}
+                                                className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
+                                                loading="lazy"
+                                              />
+                                              <div className="absolute inset-0 bg-black/5 group-hover:bg-black/0 transition-colors" />
+                                            </>
+                                          ) : (
+                                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-blue-500/20 group-hover:scale-105 transition-transform duration-500">
+                                              <GraduationCap className="h-12 w-12 text-primary/40" />
+                                            </div>
+                                          )}
+                                        </div>
 
-                              <div className="p-5 flex-1 flex flex-col">
-                                <h3 className="text-xl font-bold mb-2 line-clamp-2 group-hover:text-primary transition-colors">
-                                  {img.title}
-                                </h3>
-                                <div className="text-muted-foreground text-sm line-clamp-3 mb-4 flex-1">
-                                  {(() => {
-                                    if (!img.description) return "Explore this resource in detail...";
-                                    // Basic check to see if it's HTML (from rich text editor)
-                                    const isHtml = /<[a-z][\s\S]*>/i.test(img.description);
-                                    if (isHtml) {
-                                      // Create a temporary element to strip HTML tags for preview
-                                      const tmp = document.createElement("DIV");
-                                      tmp.innerHTML = img.description;
-                                      return (tmp.textContent || tmp.innerText || "").slice(0, 100) + "...";
-                                    } else {
-                                      // It's likely markdown or plain text
-                                      return cleanTextContent(img.description).slice(0, 100) + '...';
-                                    }
-                                  })()}
-                                </div>
-                                <div className="flex items-center justify-between mt-auto pt-2 border-t">
-                                  <div className="text-primary text-sm font-medium flex items-center">
-                                    Read Article <ZoomIn className="ml-2 h-4 w-4" />
-                                  </div>
-                                  <span className="text-xs text-muted-foreground">
-                                    {new Date(img.createdAt).toLocaleDateString()}
-                                  </span>
+                                        <div className="p-5 flex-1 flex flex-col">
+                                          <h3 className="text-xl font-bold mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+                                            {img.title}
+                                          </h3>
+                                          <div className="text-muted-foreground text-sm line-clamp-3 mb-4 flex-1">
+                                            {(() => {
+                                              if (!img.description) return "Explore this resource in detail...";
+                                              const isHtml = /<[a-z][\s\S]*>/i.test(img.description);
+                                              if (isHtml) {
+                                                const tmp = document.createElement("DIV");
+                                                tmp.innerHTML = img.description;
+                                                return (tmp.textContent || tmp.innerText || "").slice(0, 100) + "...";
+                                              } else {
+                                                return cleanTextContent(img.description).slice(0, 100) + '...';
+                                              }
+                                            })()}
+                                          </div>
+                                          <div className="flex items-center justify-between mt-auto pt-2 border-t">
+                                            <div className="text-primary text-sm font-medium flex items-center">
+                                              Read Article <ZoomIn className="ml-2 h-4 w-4" />
+                                            </div>
+                                            <span className="text-xs text-muted-foreground">
+                                              {new Date(img.createdAt).toLocaleDateString()}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </Card>
+                                    </motion.div>
+                                  ))}
                                 </div>
                               </div>
-                            </Card>
-                          </motion.div>
+                            )}
+                          </CellMeasurer>
                         );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                      }}
+                    />
+                  )}
+                </AutoSizer>
+              )}
+            </WindowScroller>
           )}
         </div>
       </div>

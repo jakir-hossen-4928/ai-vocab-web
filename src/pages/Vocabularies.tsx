@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams, useLocation, useNavigationType } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { VocabCard } from "@/components/VocabCard";
-import { Plus, Search, Filter, X, RefreshCw, Globe, Mic } from "lucide-react";
+import { Plus, Search, Filter, X, RefreshCw, Globe, Mic, History as HistoryIcon } from "lucide-react";
 import { useVocabularies, useVocabularyMutations } from "@/hooks/useVocabularies";
 import { useFavorites } from "@/hooks/useFavorites";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
@@ -29,8 +29,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { motion } from "framer-motion";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { motion, AnimatePresence } from "framer-motion";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Vocabulary } from "@/types/vocabulary";
 import { WordChatModal } from "@/components/WordChatModal";
@@ -40,6 +39,8 @@ import { toast } from "sonner";
 import { getSelectedModel } from "@/openrouterAi/apiKeyStorage";
 import { useVoiceSearch } from "@/hooks/useVoiceSearch";
 import { useViewPreference } from "@/hooks/useViewPreference";
+import { vocabularyService } from "@/services/vocabularyService";
+import { List, AutoSizer, WindowScroller, CellMeasurer, CellMeasurerCache } from "react-virtualized";
 
 export default function Vocabularies() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -72,7 +73,9 @@ export default function Vocabularies() {
   const [chatVocab, setChatVocab] = useState<Vocabulary | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatInitialPrompt, setChatInitialPrompt] = useState<string | undefined>(undefined);
-
+  // Modal & Search State
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [model, setModel] = useState<string | null>(getSelectedModel() || null);
 
   // View Preference State
@@ -98,60 +101,27 @@ export default function Vocabularies() {
 
   const parentRef = useRef<HTMLDivElement>(null);
 
-  const rowVirtualizer = useVirtualizer({
-    count: filteredVocabs.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 180, // Increased estimate for better initial render
-    overscan: 10, // Increased overscan for smoother fast scrolling
-  });
-
-  // Manual Scroll Restoration for Virtual List
+  // Grid configuration
+  const [columns, setColumns] = useState(1);
   useEffect(() => {
-    const scrollKey = `scroll_pos_${location.key}_vocabularies_list`;
-
-    // Only save if we have data to scroll through
-    const handleScroll = () => {
-      if (parentRef.current && filteredVocabs.length > 0) {
-        sessionStorage.setItem(scrollKey, parentRef.current.scrollTop.toString());
-      }
+    const updateColumns = () => {
+      const width = window.innerWidth;
+      if (width >= 1024) setColumns(3);
+      else if (width >= 768) setColumns(2);
+      else setColumns(1);
     };
+    updateColumns();
+    window.addEventListener('resize', updateColumns);
+    return () => window.removeEventListener('resize', updateColumns);
+  }, []);
 
-    // Attach listener
-    const scrollElement = parentRef.current;
-    if (scrollElement) {
-      scrollElement.addEventListener('scroll', handleScroll, { passive: true });
-    }
+  // react-virtualized Cache
+  const cache = useRef(new CellMeasurerCache({
+    fixedWidth: true,
+    defaultHeight: 300,
+  }));
 
-    // Restore scroll position
-    // We only attempt restoration if we have data and it's a POP navigation (back/forward)
-    if (navType === 'POP' && filteredVocabs.length > 0) {
-      const savedPosition = sessionStorage.getItem(scrollKey);
-
-      if (savedPosition) {
-        const offset = parseInt(savedPosition, 10);
-
-        // We use a timeout to ensure the virtualizer has had a chance to measure items
-        // after the data update.
-        const attemptRestore = () => {
-          if (rowVirtualizer && parentRef.current) {
-            rowVirtualizer.scrollToOffset(offset);
-          }
-        };
-
-        // Attempt immediately and after short delays to catch layout shifts
-        attemptRestore();
-        requestAnimationFrame(attemptRestore);
-        setTimeout(attemptRestore, 50);
-        setTimeout(attemptRestore, 150);
-      }
-    }
-
-    return () => {
-      if (scrollElement) {
-        scrollElement.removeEventListener('scroll', handleScroll);
-      }
-    };
-  }, [filteredVocabs.length, navType, location.key, rowVirtualizer]);
+  // Close details modal on mobile/tablet resize
 
   useEffect(() => {
     if (!user) {
@@ -204,6 +174,11 @@ export default function Vocabularies() {
     }
   }, [vocabularies, debouncedSearch, selectedPos, sortOrder, showFavorites, favorites]);
 
+  // Clear cache when search or data changes
+  useEffect(() => {
+    cache.current.clearAll();
+  }, [debouncedSearch, filteredVocabs]);
+
   // Search online dictionary when no local results
   useEffect(() => {
     const searchOnline = async () => {
@@ -217,16 +192,13 @@ export default function Vocabularies() {
       if (filteredVocabs.length === 0 && !isWorkerFiltering) {
         setIsSearchingOnline(true);
         try {
-          const result = await searchDictionaryAPI(debouncedSearch);
-          if (result) {
-            const vocab = convertDictionaryToVocabulary(result, `online-${Date.now()}`);
-            setOnlineResults([vocab]);
-            console.log('[Vocabularies] Found online dictionary result:', vocab.english);
-          } else {
-            setOnlineResults([]);
-          }
+          // Use vocabularyService.search which already handles local -> cache -> online logic
+          const results = await vocabularyService.search(debouncedSearch);
+          // For this page, we only show results that came from outside the normal local dataset
+          const onlineOnly = results.filter(r => r.isOnline || r.isFromAPI);
+          setOnlineResults(onlineOnly);
         } catch (error) {
-          console.error('[Vocabularies] Online dictionary search failed:', error);
+          console.error('[Vocabularies] Online search failed:', error);
           setOnlineResults([]);
         } finally {
           setIsSearchingOnline(false);
@@ -234,7 +206,18 @@ export default function Vocabularies() {
       } else {
         setOnlineResults([]);
       }
+
+      // Refresh search history
+      if (debouncedSearch) {
+        const history = await vocabularyService.getSearchHistory(10);
+        setSearchHistory(history);
+      }
     };
+
+    // Load initial history
+    if (!debouncedSearch) {
+      vocabularyService.getSearchHistory(10).then(setSearchHistory);
+    }
 
     searchOnline();
   }, [debouncedSearch, filteredVocabs.length, isWorkerFiltering, selectedPos, showFavorites, isLoading]);
@@ -365,16 +348,18 @@ export default function Vocabularies() {
         initial={{ opacity: 0, y: -50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground px-3 sm:px-4 pt-4 sm:pt-8 pb-4 sm:pb-6 shadow-md flex-shrink-0"
+        className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground px-3 sm:px-4 pt-3 sm:pt-6 pb-4 sm:pb-6 shadow-md flex-shrink-0 z-50"
       >
-        <div className="max-w-4xl mx-auto w-full">
+        <div className="max-w-7xl mx-auto w-full">
           <div className="flex items-start sm:items-center justify-between mb-3 sm:mb-4 gap-2">
             <div className="flex-1 min-w-0">
               <h1 className="text-lg sm:text-2xl font-bold mb-0.5 sm:mb-1 truncate">Vocabularies</h1>
-              <p className="text-primary-foreground/80 text-xs sm:text-sm">
-                {filteredVocabs.length + onlineResults.length} words found
+              <p className="text-primary-foreground/80 text-xs sm:text-sm h-4 sm:h-5 flex items-center">
+                <span className="truncate">
+                  {filteredVocabs.length + onlineResults.length} words found
+                </span>
                 {onlineResults.length > 0 && (
-                  <span className="ml-2 inline-flex items-center gap-1 bg-white/20 px-2 py-0.5 rounded-full text-[10px] sm:text-xs">
+                  <span className="ml-2 inline-flex items-center gap-1 bg-white/20 px-2 py-0.5 rounded-full text-[10px] sm:text-xs shrink-0">
                     <Globe className="h-3 w-3" />
                     {onlineResults.length} online
                   </span>
@@ -418,67 +403,121 @@ export default function Vocabularies() {
           </div>
 
           {/* Search and Filter Bar */}
-          {/* Search and Filter Bar */}
           <div className="flex gap-1.5 sm:gap-2">
-            <div className="relative flex-1 group bg-white shadow-lg rounded-xl flex items-center transition-all duration-200 focus-within:ring-2 focus-within:ring-white/20">
-              <Search className="absolute left-3 sm:left-4 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground/60 transition-colors pointer-events-none" />
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                (e.currentTarget.querySelector('input') as HTMLInputElement)?.blur();
+              }}
+              className="relative flex-1 group bg-white shadow-lg rounded-xl flex items-center transition-all duration-200 focus-within:ring-2 focus-within:ring-white/20"
+            >
+              <Search className="absolute left-3 sm:left-4 h-4 w-4 text-foreground/80 transition-colors group-focus-within:text-primary" />
               <Input
-                placeholder={window.innerWidth < 640 ? "Search..." : "Search words..."}
+                placeholder="Find words..."
+                className="pl-9 sm:pl-10 h-10 sm:h-12 border-0 bg-transparent focus-visible:ring-0 text-foreground text-sm sm:text-base pr-24 sm:pr-32"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className={`pl-9 sm:pl-12 bg-transparent border-0 text-foreground placeholder:text-muted-foreground/50 focus-visible:ring-0 h-10 sm:h-12 text-xs sm:text-sm transition-all ${searchQuery ? 'pr-[6.5rem] sm:pr-36' : 'pr-[4.8rem] sm:pr-28'
-                  }`}
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.currentTarget.blur();
+                  }
+                }}
+                aria-label="Search vocabulary"
+                enterKeyHint="search"
+                type="search"
+                className="pl-9 sm:pl-10 h-10 sm:h-12 border-0 bg-transparent focus-visible:ring-0 text-foreground text-sm sm:text-base pr-24 sm:pr-32 placeholder:text-muted-foreground"
               />
 
-              {/* Clear Button - Shows when there's text */}
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-[5.2rem] sm:right-[7.2rem] top-1/2 -translate-y-1/2 p-1.5 rounded-full hover:bg-slate-100 text-muted-foreground/50 hover:text-foreground transition-colors z-10"
+              <div className="absolute right-2 sm:right-3 flex items-center gap-1.5 sm:gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    setSearchQuery("");
+                    setOnlineResults([]);
+                    (e.currentTarget.closest('.relative')?.querySelector('input') as HTMLInputElement)?.blur();
+                  }}
+                  className={`h-7 w-7 sm:h-8 sm:w-8 rounded-full hover:bg-slate-100 transition-opacity text-foreground ${searchQuery ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                   aria-label="Clear search"
                 >
-                  <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                </button>
-              )}
-
-              {/* Voice & Language Controls Group */}
-              <div className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 sm:gap-1 z-10 bg-transparent sm:bg-black/5 rounded-full p-0 sm:p-1 sm:backdrop-blur-[2px]">
-                <button
-                  onClick={toggleLanguage}
-                  className="
-                    flex items-center justify-center
-                    px-1 h-5.5 sm:h-8 min-w-[24px] sm:min-w-[36px]
-                    text-[8px] sm:text-xs font-bold
-                    rounded-full transition-all duration-200
-                    bg-slate-100/80 hover:bg-slate-200/80
-                    text-muted-foreground/80 border-0 sm:border border-slate-200
-                    active:scale-95 select-none shadow-sm
-                  "
-                  title={`Switch language (Current: ${language === 'en-US' ? 'English' : 'Bangla'})`}
-                >
-                  {language === 'en-US' ? 'EN' : 'BN'}
-                </button>
-
-                <div className="w-px h-3 bg-primary-foreground/10 mx-0.5 hidden sm:block" />
-
-                <button
-                  onClick={startListening}
-                  disabled={isListening}
-                  className={`
-                    flex items-center justify-center rounded-full transition-all duration-300
-                    h-5.5 w-5.5 sm:h-8 sm:w-8
-                    ${isListening
-                      ? 'bg-red-500 text-white shadow-lg scale-110'
-                      : 'text-muted-foreground/60 hover:text-foreground hover:bg-slate-100'
-                    }
-                  `}
-                  aria-label="Voice search"
-                  title="Voice search"
-                >
-                  <Mic className={`h-3 w-3 sm:h-4 sm:w-4 ${isListening ? 'animate-pulse' : ''}`} />
-                </button>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+                <div className="flex items-center gap-1 border-l pl-1.5 sm:pl-2 border-slate-100">
+                  <button
+                    type="button"
+                    onClick={toggleLanguage}
+                    className="text-[10px] sm:text-xs font-bold text-muted-foreground hover:text-primary transition-colors px-1 sm:px-2"
+                    aria-label={language === 'en-US' ? "Switch to Bengali" : "Switch to English"}
+                    title={`Switch language (Current: ${language === 'en-US' ? 'English' : 'Bangla'})`}
+                  >
+                    {language === 'en-US' ? 'EN' : 'BN'}
+                  </button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={startListening}
+                    className={`h-7 sm:h-8 w-7 sm:w-8 rounded-full transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'hover:bg-slate-100 text-muted-foreground'}`}
+                    aria-label="Voice search"
+                  >
+                    <Mic className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isListening ? 'animate-pulse' : ''}`} />
+                  </Button>
+                </div>
               </div>
-            </div>
+
+              {/* Search History Dropdown */}
+              <AnimatePresence>
+                {isSearchFocused && !searchQuery.trim() && searchHistory.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-zinc-800 z-[100] overflow-hidden"
+                  >
+                    <div className="p-3 border-b border-slate-50 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-800/50">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 flex items-center gap-2">
+                        <HistoryIcon className="h-3 w-3" /> Recent Searches
+                      </span>
+                      <button
+                        type="button"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          await vocabularyService.clearSearchHistory();
+                          setSearchHistory([]);
+                        }}
+                        className="text-[9px] font-bold text-primary hover:underline"
+                      >
+                        Clear All
+                      </button>
+                    </div>
+                    <div className="max-h-[240px] overflow-y-auto">
+                      {searchHistory.map((item, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault(); // Prevent blur
+                            setSearchQuery(item);
+                            setSearchParams({ search: item });
+                            // Hide keyboard on history selection
+                            if (document.activeElement instanceof HTMLElement) {
+                              document.activeElement.blur();
+                            }
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-zinc-800/80 text-left transition-colors group"
+                        >
+                          <Search className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+                          <span className="flex-1 text-sm text-foreground truncate">{item}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </form>
 
             <Sheet>
               <SheetTrigger asChild>
@@ -611,103 +650,153 @@ export default function Vocabularies() {
       </motion.header>
 
       <div
-        ref={parentRef}
-        className="flex-1 overflow-y-auto w-full max-w-4xl mx-auto pb-20 md:pb-0"
+        className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8"
       >
         {isLoading ? (
-          <div className="py-12 flex flex-col items-center justify-center gap-3">
+          <div className="py-20 flex flex-col items-center justify-center gap-4">
             <LoadingSpinner />
-            <p className="text-sm text-muted-foreground">Loading vocabularies...</p>
+            <p className="text-sm font-medium text-muted-foreground animate-pulse">Gathering your vocabulary...</p>
           </div>
         ) : isWorkerFiltering && filteredVocabs.length === 0 && onlineResults.length === 0 ? (
-          <div className="py-12 flex flex-col items-center justify-center gap-3">
+          <div className="py-20 flex flex-col items-center justify-center gap-4">
             <LoadingSpinner />
-            <p className="text-sm text-muted-foreground">Searching...</p>
+            <p className="text-sm font-medium text-muted-foreground">Searching locally...</p>
           </div>
         ) : isSearchingOnline ? (
-          <div className="py-12 flex flex-col items-center justify-center gap-3">
+          <div className="py-20 flex flex-col items-center justify-center gap-4">
             <LoadingSpinner />
-            <p className="text-sm text-muted-foreground">Searching online dictionary...</p>
+            <p className="text-sm font-medium text-muted-foreground">Consulting online dictionary...</p>
           </div>
         ) : filteredVocabs.length === 0 && onlineResults.length === 0 ? (
-          <div className="text-center py-8 sm:py-12 px-4">
-            <div className="bg-muted/50 rounded-full h-12 w-12 sm:h-16 sm:w-16 flex items-center justify-center mx-auto mb-3 sm:mb-4">
-              <Search className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground" />
+          <div className="text-center py-20 px-4 max-w-md mx-auto">
+            <div className="bg-primary/5 rounded-full h-20 w-20 flex items-center justify-center mx-auto mb-6">
+              <Search className="h-10 w-10 text-primary/30" />
             </div>
-            <h3 className="text-base sm:text-lg font-semibold mb-1.5 sm:mb-2">No words found</h3>
-            <p className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6 max-w-xs mx-auto">
-              {searchQuery ? `No results for "${searchQuery}"` : "Try adjusting your filters to find what you're looking for."}
+            <h3 className="text-xl font-bold mb-2">No words matched</h3>
+            <p className="text-muted-foreground mb-8 text-sm">
+              {searchQuery ? `We couldn't find any results for "${searchQuery}".` : "Your collection is empty or filters are too restrictive."}
             </p>
-            <Button variant="outline" onClick={clearFilters} className="h-9 sm:h-10 text-sm sm:text-base">
-              Clear Filters
+            <Button variant="outline" onClick={clearFilters} className="rounded-xl px-8 border-primary/20 hover:bg-primary/5 text-primary">
+              Reset Filters
             </Button>
           </div>
         ) : (
-          <>
-            {/* Local Results */}
+          <div className="pt-4 pb-32 md:pb-8">
+            {/* Local Results Grid */}
             {filteredVocabs.length > 0 && (
-              <div
-                style={{
-                  height: `${rowVirtualizer.getTotalSize()}px`,
-                  width: '100%',
-                  position: 'relative',
-                }}
-              >
-                {rowVirtualizer.getVirtualItems().map((virtualItem) => {
-                  const vocab = filteredVocabs[virtualItem.index];
-                  return (
-                    <div
-                      key={virtualItem.key}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: `${virtualItem.size}px`,
-                        transform: `translateY(${virtualItem.start}px)`,
-                      }}
-                      className="px-3 sm:px-4 py-3"
-                    >
-                      <VocabCard
-                        vocab={vocab}
-                        index={virtualItem.index}
-                        isFavorite={favorites.includes(vocab.id)}
-                        onToggleFavorite={toggleFavorite}
-                        onClick={() => handleVocabClick(vocab)}
-                        onDelete={handleDelete}
-                        onImproveMeaning={handleImproveMeaning}
-                        isAdmin={isAdmin}
-                        className="h-full"
+              <WindowScroller>
+                {({ height, isScrolling, onChildScroll, scrollTop }) => (
+                  <AutoSizer disableHeight>
+                    {({ width }) => (
+                      <List
+                        autoHeight
+                        height={height}
+                        isScrolling={isScrolling}
+                        onScroll={onChildScroll}
+                        scrollTop={scrollTop}
+                        width={width}
+                        rowCount={Math.ceil(filteredVocabs.length / columns)}
+                        rowHeight={cache.current.rowHeight}
+                        deferredMeasurementCache={cache.current}
+                        overscanRowCount={10}
+                        rowRenderer={({ index, key, parent, style }) => {
+                          const itemsRow = [];
+                          for (let i = 0; i < columns; i++) {
+                            const itemIndex = index * columns + i;
+                            if (itemIndex < filteredVocabs.length) {
+                              itemsRow.push({ item: filteredVocabs[itemIndex], index: itemIndex });
+                            }
+                          }
+
+                          return (
+                            <CellMeasurer
+                              cache={cache.current}
+                              columnIndex={0}
+                              key={key}
+                              parent={parent}
+                              rowIndex={index}
+                            >
+                              {({ registerChild }) => (
+                                <div
+                                  ref={registerChild as any}
+                                  style={style}
+                                  className="py-3"
+                                >
+                                  <div
+                                    className="grid gap-4 sm:gap-6"
+                                    style={{
+                                      gridTemplateColumns: itemsRow.length < columns && filteredVocabs.length < columns
+                                        ? `repeat(${itemsRow.length}, minmax(0, 500px))`
+                                        : `repeat(${columns}, 1fr)`,
+                                      justifyContent: itemsRow.length < columns && filteredVocabs.length < columns ? 'center' : 'start',
+                                    }}
+                                  >
+                                    {itemsRow.map(({ item, index }) => (
+                                      <div key={item.id} className="h-full">
+                                        <VocabCard
+                                          vocab={item}
+                                          index={index}
+                                          isFavorite={favorites.includes(item.id)}
+                                          onToggleFavorite={toggleFavorite}
+                                          searchQuery={searchQuery}
+                                          onClick={() => handleVocabClick(item)}
+                                          onDelete={handleDelete}
+                                          onImproveMeaning={handleImproveMeaning}
+                                          isAdmin={isAdmin}
+                                          className="h-full"
+                                        />
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </CellMeasurer>
+                          );
+                        }}
                       />
-                    </div>
-                  );
-                })}
-              </div>
+                    )}
+                  </AutoSizer>
+                )}
+              </WindowScroller>
             )}
 
             {/* Online Results */}
             {onlineResults.length > 0 && (
-              <div className="px-3 sm:px-4 py-3">
-                <div className="flex items-center gap-2 mb-3">
-                  <Globe className="h-4 w-4 text-primary" />
-                  <h3 className="text-sm font-semibold text-muted-foreground">Online Dictionary Results</h3>
+              <div className="mt-8 mb-4">
+                <div className="flex items-center gap-2 mb-4 px-2">
+                  <div className="h-px flex-1 bg-primary/10" />
+                  <div className="flex items-center gap-2 bg-primary/5 px-3 py-1 rounded-full border border-primary/10">
+                    <Globe className="h-3.5 w-3.5 text-primary" />
+                    <h3 className="text-[11px] font-black uppercase tracking-widest text-primary/70">Online Results</h3>
+                  </div>
+                  <div className="h-px flex-1 bg-primary/10" />
                 </div>
-                {onlineResults.map((vocab, index) => (
-                  <div key={vocab.id} className="mb-3">
+                <div
+                  className="grid gap-4 sm:gap-6 py-4 px-1"
+                  style={{
+                    gridTemplateColumns: onlineResults.length < columns
+                      ? `repeat(${onlineResults.length}, minmax(0, 500px))`
+                      : `repeat(${columns}, 1fr)`,
+                    justifyContent: onlineResults.length < columns ? 'center' : 'start',
+                  }}
+                >
+                  {onlineResults.map((vocab, index) => (
                     <VocabCard
+                      key={vocab.id}
                       vocab={vocab}
                       index={index}
                       isFavorite={false}
                       onToggleFavorite={() => { }}
+                      searchQuery={searchQuery}
                       onClick={() => { }} // Don't navigate for online results
                       isAdmin={false}
                       className="h-full"
                     />
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
       <WordChatModal
@@ -746,6 +835,6 @@ export default function Vocabularies() {
         hasNext={selectedVocab ? filteredVocabs.findIndex(v => v.id === selectedVocab.id) !== -1 && filteredVocabs.findIndex(v => v.id === selectedVocab.id) < filteredVocabs.length - 1 : false}
         hasPrevious={selectedVocab ? filteredVocabs.findIndex(v => v.id === selectedVocab.id) > 0 : false}
       />
-    </div >
+    </div>
   );
 }
