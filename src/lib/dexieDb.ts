@@ -362,6 +362,14 @@ export const dexieService = {
         }
     },
 
+    async clearFavorites(): Promise<void> {
+        try {
+            await db.favorites.clear();
+        } catch (error) {
+            console.error('Failed to clear favorites from Dexie:', error);
+        }
+    },
+
     async syncFavoritesFromLocalStorage(): Promise<void> {
         try {
             const saved = localStorage.getItem("favorites");

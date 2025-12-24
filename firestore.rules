@@ -39,6 +39,15 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
-   
+    // User activities and progress
+    match /users/{userId} {
+      // Allow users to read and write their own data
+      match /activities/{activityId} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      }
+      match /flashcard_progress/{vocabId} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      }
+    }
   }
 }

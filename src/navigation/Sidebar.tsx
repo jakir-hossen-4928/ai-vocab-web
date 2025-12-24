@@ -1,4 +1,4 @@
-import { Home, BookOpen, GraduationCap, User, Activity, Globe, Shield, Users, LogOut, BarChart, Layers, Upload, Heart, Plus, Wand2, ChevronLeft, ChevronRight, LayoutDashboard, Database, Settings } from "lucide-react";
+import { Home, BookOpen, GraduationCap, User, Activity, Globe, Shield, Users, LogOut, BarChart, Layers, Upload, Heart, Plus, Wand2, ChevronLeft, ChevronRight, LayoutDashboard, Database, Settings, Download, Search } from "lucide-react";
 import { NavLink } from "@/navigation/NavLink";
 import { useNative } from "@/hooks/useNative";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,6 +20,7 @@ const mainNavItems = [
     { path: "/flashcards", icon: Layers, label: "Flashcards" },
     { path: "/dictionary", icon: Globe, label: "Dictionary" },
     { path: "/resources", icon: GraduationCap, label: "Resources" },
+    { path: "/download", icon: Download, label: "Download App" },
 ];
 
 const adminNavItems = [
@@ -108,31 +109,36 @@ export const Sidebar = () => {
             {/* User Profile Hook */}
             {!isCollapsed && (
                 <div className="px-4 mb-4">
-                    <div className="p-4 rounded-3xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/10 flex items-center gap-3 group cursor-pointer hover:border-primary/30 transition-all" onClick={() => navigate("/profile")}>
-                        <Avatar className="h-11 w-11 border-2 border-background shadow-md group-hover:scale-105 transition-transform">
-                            <AvatarImage src={user?.photoURL || ''} />
-                            <AvatarFallback className="bg-primary/10 text-primary font-black">
-                                {user?.displayName?.[0] || user?.email?.[0] || 'U'}
-                            </AvatarFallback>
-                        </Avatar>
+                    <div className="p-4 rounded-[2rem] bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/10 flex items-center gap-3 group cursor-pointer hover:border-primary/30 transition-all shadow-sm hover:shadow-md" onClick={() => navigate("/profile")}>
+                        <div className="relative">
+                            <div className="absolute -inset-0.5 bg-gradient-to-tr from-primary/30 to-primary/5 rounded-full blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <Avatar className="h-11 w-11 border-2 border-background shadow-lg relative group-hover:scale-105 transition-transform bg-background">
+                                <AvatarImage src={user?.photoURL || ''} className="object-cover" />
+                                <AvatarFallback className="bg-primary/10 text-primary font-black">
+                                    {user?.displayName?.[0] || user?.email?.[0] || 'U'}
+                                </AvatarFallback>
+                            </Avatar>
+                        </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-black truncate leading-none mb-1 group-hover:text-primary transition-colors">{user?.displayName || 'Welcome'}</p>
-                            <p className="text-[10px] text-muted-foreground truncate font-medium">{user?.email}</p>
+                            <p className="text-sm font-black truncate tracking-tight group-hover:text-primary transition-colors">{user?.displayName || 'Welcome'}</p>
+                            <p className="text-[10px] text-muted-foreground truncate font-semibold opacity-70">{user?.email}</p>
                         </div>
                     </div>
                 </div>
             )}
             {isCollapsed && (
                 <div className="px-4 mb-6 flex flex-col items-center gap-4">
-                    <Avatar
-                        className="h-12 w-12 border-2 border-primary/10 cursor-pointer hover:ring-4 hover:ring-primary/10 transition-all shadow-sm"
-                        onClick={() => navigate("/profile")}
-                    >
-                        <AvatarImage src={user?.photoURL || ''} />
-                        <AvatarFallback className="bg-primary/5 text-primary font-black text-lg">
-                            {user?.displayName?.[0] || user?.email?.[0] || 'U'}
-                        </AvatarFallback>
-                    </Avatar>
+                    <div className="relative group cursor-pointer" onClick={() => navigate("/profile")}>
+                        <div className="absolute -inset-1 bg-gradient-to-tr from-primary/30 to-primary/5 rounded-full blur-sm opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <Avatar
+                            className="h-12 w-12 border-2 border-background relative group-hover:scale-105 transition-all shadow-xl bg-background"
+                        >
+                            <AvatarImage src={user?.photoURL || ''} className="object-cover" />
+                            <AvatarFallback className="bg-primary/5 text-primary font-black text-lg">
+                                {user?.displayName?.[0] || user?.email?.[0] || 'U'}
+                            </AvatarFallback>
+                        </Avatar>
+                    </div>
                     <Separator className="w-12 opacity-50" />
                 </div>
             )}

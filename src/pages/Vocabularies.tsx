@@ -83,6 +83,8 @@ export default function Vocabularies() {
   const [showPreferenceDialog, setShowPreferenceDialog] = useState(false);
   const [selectedVocab, setSelectedVocab] = useState<Vocabulary | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [lastViewedId, setLastViewedId] = useState<string | null>(null);
+  const [isResuming, setIsResuming] = useState(false);
 
   // Voice search
   const { isListening, startListening, language, toggleLanguage, interimTranscript } = useVoiceSearch((transcript) => {
@@ -126,6 +128,9 @@ export default function Vocabularies() {
   useEffect(() => {
     if (!user) {
       navigate("/auth");
+    } else {
+      const savedLastViewedId = localStorage.getItem('last_viewed_vocab_id');
+      setLastViewedId(savedLastViewedId);
     }
   }, [user, navigate]);
 
@@ -341,6 +346,17 @@ export default function Vocabularies() {
     }
   };
 
+  const handleResume = async () => {
+    if (!lastViewedId || vocabularies.length === 0) return;
+
+    const vocab = vocabularies.find(v => v.id === lastViewedId);
+    if (vocab) {
+      handleVocabClick(vocab);
+    } else {
+      toast.info("Last viewed word not found in current list");
+    }
+  };
+
   return (
     <div className="h-[100dvh] flex flex-col bg-background">
       {/* Header */}
@@ -378,6 +394,17 @@ export default function Vocabularies() {
               >
                 <RefreshCw className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isRefetching ? 'animate-spin' : ''}`} />
               </Button>
+              {lastViewedId && (
+                <Button
+                  onClick={handleResume}
+                  size="sm"
+                  variant="secondary"
+                  className="bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30 shadow-sm text-xs h-8 sm:h-9 px-2 sm:px-3 flex items-center gap-1"
+                >
+                  <HistoryIcon className="h-3.5 w-3.5" />
+                  <span className="hidden xs:inline">Resume</span>
+                </Button>
+              )}
               {isAdmin && (
                 <div className="flex gap-1.5 sm:gap-2 flex-shrink-0">
                   <Button
@@ -413,8 +440,7 @@ export default function Vocabularies() {
             >
               <Search className="absolute left-3 sm:left-4 h-4 w-4 text-foreground/80 transition-colors group-focus-within:text-primary" />
               <Input
-                placeholder="Find words..."
-                className="pl-9 sm:pl-10 h-10 sm:h-12 border-0 bg-transparent focus-visible:ring-0 text-foreground text-sm sm:text-base pr-24 sm:pr-32"
+                className="pl-9 sm:pl-10 h-10 sm:h-12 border-0 bg-transparent focus-visible:ring-0 text-foreground text-sm sm:text-base pr-24 sm:pr-32 placeholder:text-muted-foreground"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setIsSearchFocused(true)}
@@ -427,7 +453,6 @@ export default function Vocabularies() {
                 aria-label="Search vocabulary"
                 enterKeyHint="search"
                 type="search"
-                className="pl-9 sm:pl-10 h-10 sm:h-12 border-0 bg-transparent focus-visible:ring-0 text-foreground text-sm sm:text-base pr-24 sm:pr-32 placeholder:text-muted-foreground"
               />
 
               <div className="absolute right-2 sm:right-3 flex items-center gap-1.5 sm:gap-2">
@@ -440,7 +465,7 @@ export default function Vocabularies() {
                     setOnlineResults([]);
                     (e.currentTarget.closest('.relative')?.querySelector('input') as HTMLInputElement)?.blur();
                   }}
-                  className={`h-7 w-7 sm:h-8 sm:w-8 rounded-full hover:bg-slate-100 transition-opacity text-foreground ${searchQuery ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                  className={`h - 7 w - 7 sm: h - 8 sm: w - 8 rounded - full hover: bg - slate - 100 transition - opacity text - foreground ${searchQuery ? 'opacity-100' : 'opacity-0 pointer-events-none'} `}
                   aria-label="Clear search"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -451,7 +476,7 @@ export default function Vocabularies() {
                     onClick={toggleLanguage}
                     className="text-[10px] sm:text-xs font-bold text-muted-foreground hover:text-primary transition-colors px-1 sm:px-2"
                     aria-label={language === 'en-US' ? "Switch to Bengali" : "Switch to English"}
-                    title={`Switch language (Current: ${language === 'en-US' ? 'English' : 'Bangla'})`}
+                    title={`Switch language(Current: ${language === 'en-US' ? 'English' : 'Bangla'})`}
                   >
                     {language === 'en-US' ? 'EN' : 'BN'}
                   </button>
@@ -460,10 +485,10 @@ export default function Vocabularies() {
                     variant="ghost"
                     size="icon"
                     onClick={startListening}
-                    className={`h-7 sm:h-8 w-7 sm:w-8 rounded-full transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'hover:bg-slate-100 text-muted-foreground'}`}
+                    className={`h - 7 sm: h - 8 w - 7 sm: w - 8 rounded - full transition - all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'hover:bg-slate-100 text-muted-foreground'} `}
                     aria-label="Voice search"
                   >
-                    <Mic className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isListening ? 'animate-pulse' : ''}`} />
+                    <Mic className={`h - 3.5 w - 3.5 sm: h - 4 sm: w - 4 ${isListening ? 'animate-pulse' : ''} `} />
                   </Button>
                 </div>
               </div>
@@ -675,11 +700,11 @@ export default function Vocabularies() {
             <h3 className="text-xl font-bold mb-2">No words matched</h3>
             <p className="text-muted-foreground mb-8 text-sm">
               {searchQuery ? `We couldn't find any results for "${searchQuery}".` : "Your collection is empty or filters are too restrictive."}
-            </p>
+            </p >
             <Button variant="outline" onClick={clearFilters} className="rounded-xl px-8 border-primary/20 hover:bg-primary/5 text-primary">
               Reset Filters
             </Button>
-          </div>
+          </div >
         ) : (
           <div className="pt-4 pb-32 md:pb-8">
             {/* Local Results Grid */}
@@ -797,14 +822,14 @@ export default function Vocabularies() {
               </div>
             )}
           </div>
-        )}
+        )
+        }
       </div>
       <WordChatModal
         vocabulary={chatVocab}
         open={isChatOpen}
         onOpenChange={setIsChatOpen}
         initialPrompt={chatInitialPrompt}
-
         model={model}
       />
 

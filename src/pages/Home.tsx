@@ -21,6 +21,7 @@ import { useVoiceSearch } from "@/hooks/useVoiceSearch";
 import { safeTimestamp } from "@/utils/dateUtils";
 import { vocabularyService } from "@/services/vocabularyService";
 import { History } from "lucide-react";
+import { metaService } from "@/services/metaService";
 
 export default function Home() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -88,6 +89,10 @@ export default function Home() {
     };
     window.addEventListener('storage', handler);
     return () => window.removeEventListener('storage', handler);
+  }, []);
+
+  useEffect(() => {
+    metaService.resetToDefault();
   }, []);
 
   // Close details modal on mobile/tablet resize

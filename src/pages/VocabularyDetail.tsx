@@ -20,6 +20,7 @@ import { useNative } from "@/hooks/useNative";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSwipe } from "@/hooks/useSwipe";
 import { ArrowRight } from "lucide-react";
+import { metaService } from "@/services/metaService";
 
 const SwipeHint = ({ onDismiss }: { onDismiss: () => void }) => (
   <motion.div
@@ -129,6 +130,17 @@ export default function VocabularyDetail() {
 
     loadVocabulary();
   }, [id, vocabularies, navigate]);
+
+  useEffect(() => {
+    if (vocab) {
+      localStorage.setItem('last_viewed_vocab_id', vocab.id);
+      metaService.setMeta({
+        title: `${vocab.english} (${vocab.bangla}) | Ai Vocab`,
+        description: vocab.explanation,
+        type: 'website'
+      });
+    }
+  }, [vocab]);
 
   const toggleFavorite = () => {
     if (!id) return;

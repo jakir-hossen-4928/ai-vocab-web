@@ -15,6 +15,7 @@ import parse from "html-react-parser";
 import { useResourcesSimple } from "@/hooks/useResources";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSwipe } from "@/hooks/useSwipe";
+import { metaService } from "@/services/metaService";
 
 const SwipeHint = ({ onDismiss }: { onDismiss: () => void }) => (
     <motion.div
@@ -105,6 +106,18 @@ export default function ResourceDetail() {
 
         loadResource();
     }, [id, navigate, resources]);
+
+    // Update Meta Tags for social sharing
+    useEffect(() => {
+        if (grammar) {
+            metaService.setMeta({
+                title: `${grammar.title} | Ai Vocab Resources`,
+                description: grammar.description?.substring(0, 160).replace(/[#*`]/g, ''),
+                image: grammar.imageUrl || '/og-image.png',
+                type: 'article'
+            });
+        }
+    }, [grammar]);
 
     const handleShare = async () => {
         if (navigator.share) {

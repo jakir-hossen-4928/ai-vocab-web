@@ -29,6 +29,7 @@ import { Plus, Trash2 } from "lucide-react";
 import PARTS_OF_SPEECH from "@/data/partOfSpeech.json";
 import { useVocabularyShare } from "@/hooks/useVocabularyShare";
 import { ShareableVocabularyCard } from "./ShareableVocabularyCard";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface VocabularyDetailsModalProps {
     vocabulary: Vocabulary | null;
@@ -72,6 +73,7 @@ export function VocabularyDetailsModal({
     hasPrevious = false,
 }: VocabularyDetailsModalProps) {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [isEditing, setIsEditing] = useState(false);
     const [editedVocab, setEditedVocab] = useState<Vocabulary | null>(null);
     const { updateVocabulary } = useVocabularyMutations();
@@ -80,8 +82,13 @@ export function VocabularyDetailsModal({
     useEffect(() => {
         if (vocabulary) {
             setEditedVocab(vocabulary);
+
+            // Record activity locally if modal is open
+            if (open) {
+                localStorage.setItem('last_viewed_vocab_id', vocabulary.id);
+            }
         }
-    }, [vocabulary]);
+    }, [vocabulary, open]);
 
     // Keyboard navigation
     useEffect(() => {

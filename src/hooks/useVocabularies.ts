@@ -134,8 +134,14 @@ export const useVocabularyMutations = () => {
 
     const addVocabulary = useMutation({
         mutationFn: async (newVocab: Omit<Vocabulary, "id">) => {
-            const docRef = await addDoc(collection(db, "vocabularies"), newVocab);
-            return { id: docRef.id, ...newVocab } as Vocabulary;
+            const now = new Date().toISOString();
+            const dataWithTimestamps = {
+                ...newVocab,
+                createdAt: now,
+                updatedAt: now
+            };
+            const docRef = await addDoc(collection(db, "vocabularies"), dataWithTimestamps);
+            return { id: docRef.id, ...dataWithTimestamps } as Vocabulary;
         },
         onSuccess: async (newVocab) => {
             // Update Dexie cache
@@ -159,8 +165,12 @@ export const useVocabularyMutations = () => {
 
     const updateVocabulary = useMutation({
         mutationFn: async ({ id, data }: { id: string; data: Partial<Vocabulary> }) => {
-            await updateDoc(doc(db, "vocabularies", id), data);
-            return { id, ...data };
+            const updateData = {
+                ...data,
+                updatedAt: new Date().toISOString()
+            };
+            await updateDoc(doc(db, "vocabularies", id), updateData);
+            return { id, ...updateData };
         },
         onSuccess: async (updatedVocab) => {
             // Update Dexie cache
