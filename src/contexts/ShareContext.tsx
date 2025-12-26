@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 
 interface ShareContextType {
     shareAsImage: (item: Vocabulary) => Promise<void>;
-    isSharing: boolean;
+    sharingId: string | null;
     itemToShare: Vocabulary | null;
     shareRef: React.RefObject<HTMLDivElement>;
 }
@@ -14,14 +14,14 @@ const ShareContext = createContext<ShareContextType | undefined>(undefined);
 
 export const ShareProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const shareRef = useRef<HTMLDivElement>(null);
-    const [isSharing, setIsSharing] = useState(false);
+    const [sharingId, setSharingId] = useState<string | null>(null);
     const [itemToShare, setItemToShare] = useState<Vocabulary | null>(null);
 
     const shareAsImage = useCallback(async (item: Vocabulary) => {
-        if (isSharing) return;
+        if (sharingId) return;
 
         setItemToShare(item);
-        setIsSharing(true);
+        setSharingId(item.id);
 
         // Wait for state update and render
         setTimeout(async () => {
@@ -63,14 +63,14 @@ export const ShareProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 console.error('Error sharing image:', error);
                 toast.error('Failed to generate sharing image. Please try again.');
             } finally {
-                setIsSharing(false);
+                setSharingId(null);
                 setItemToShare(null);
             }
         }, 150);
-    }, [isSharing]);
+    }, [sharingId]);
 
     return (
-        <ShareContext.Provider value={{ shareAsImage, isSharing, itemToShare, shareRef }}>
+        <ShareContext.Provider value={{ shareAsImage, sharingId, itemToShare, shareRef }}>
             {children}
         </ShareContext.Provider>
     );

@@ -145,7 +145,7 @@ const AppContent = () => {
 
   useEffect(() => {
     // Start background synchronization
-    syncService.startSyncManager();
+    syncService.startRealtimeSync();
     return () => syncService.stopSyncManager();
   }, []);
 

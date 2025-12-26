@@ -57,7 +57,8 @@ export const VocabCard = memo(({
   const [isTranslating, setIsTranslating] = useState(false);
   const [translatedWord, setTranslatedWord] = useState<string>("");
   const { haptic } = useNative();
-  const { shareAsImage, shareRef, itemToShare, isSharing: isSharingImage } = useVocabularyShare();
+  const { shareAsImage, shareRef, itemToShare, isItemSharing } = useVocabularyShare();
+  const isSharingImage = isItemSharing(vocab.id);
 
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();

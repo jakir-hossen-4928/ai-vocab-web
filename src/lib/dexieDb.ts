@@ -1,6 +1,7 @@
 import Dexie, { Table } from 'dexie';
 import { Vocabulary } from '@/types/vocabulary';
 import { GrammarImage } from '@/types/grammar';
+import { searchService } from '@/services/searchService';
 
 // Chat-related interfaces
 export interface ChatMessage {
@@ -113,9 +114,21 @@ export const dexieService = {
         }
     },
 
+    async getVocabulariesByIds(ids: string[]): Promise<Vocabulary[]> {
+        try {
+            const items = await db.vocabularies.bulkGet(ids);
+            return items.filter((item): item is Vocabulary => !!item);
+        } catch (error) {
+            console.error('Failed to bulk get vocabularies from Dexie:', error);
+            return [];
+        }
+    },
+
     async addVocabulary(vocab: Vocabulary): Promise<void> {
         try {
             await db.vocabularies.put(vocab);
+            // Update search index
+            searchService.add(vocab);
         } catch (error) {
             console.error('Failed to add vocabulary to Dexie:', error);
         }
@@ -124,6 +137,8 @@ export const dexieService = {
     async addVocabularies(vocabs: Vocabulary[]): Promise<void> {
         try {
             await db.vocabularies.bulkPut(vocabs);
+            // Update search index
+            vocabs.forEach(v => searchService.add(v));
         } catch (error) {
             console.error('Failed to add vocabularies to Dexie:', error);
         }
@@ -132,6 +147,13 @@ export const dexieService = {
     async updateVocabulary(id: string, updates: Partial<Vocabulary>): Promise<void> {
         try {
             await db.vocabularies.update(id, updates);
+            // Need to fetch full object to update index correctly as MiniSearch needs full doc
+            // or at least the indexed fields.
+            // Since updates might be partial, we should get the updated doc.
+            const updatedDoc = await db.vocabularies.get(id);
+            if (updatedDoc) {
+                searchService.update(updatedDoc);
+            }
         } catch (error) {
             console.error('Failed to update vocabulary in Dexie:', error);
         }
@@ -140,14 +162,25 @@ export const dexieService = {
     async deleteVocabulary(id: string): Promise<void> {
         try {
             await db.vocabularies.delete(id);
+            searchService.remove(id);
         } catch (error) {
             console.error('Failed to delete vocabulary from Dexie:', error);
+        }
+    },
+
+    async deleteVocabularies(ids: string[]): Promise<void> {
+        try {
+            await db.vocabularies.bulkDelete(ids);
+            ids.forEach(id => searchService.remove(id));
+        } catch (error) {
+            console.error('Failed to bulk delete vocabularies from Dexie:', error);
         }
     },
 
     async clearVocabularies(): Promise<void> {
         try {
             await db.vocabularies.clear();
+            searchService.miniSearch.removeAll();
         } catch (error) {
             console.error('Failed to clear vocabularies from Dexie:', error);
         }
@@ -158,7 +191,7 @@ export const dexieService = {
             const lowerQuery = query.toLowerCase().trim();
             if (!lowerQuery) return [];
 
-            return await db.vocabularies
+            const results = await db.vocabularies
                 .filter(v => {
                     const matchesPrimary = v.english.toLowerCase().includes(lowerQuery) ||
                         v.bangla.toLowerCase().includes(lowerQuery) ||
@@ -181,10 +214,34 @@ export const dexieService = {
                     if (searchType === 'related') return !!matchesRelated;
                     if (searchType === 'verbForms') return !!matchesVerbForms;
 
-                    return matchesPrimary || matchesRelated || matchesVerbForms;
+                    return !!(matchesPrimary || matchesRelated || matchesVerbForms);
                 })
-                .limit(50)
                 .toArray();
+
+            // Sort by relevance manually in memory (fast for <100 results, typically <2000 total docs)
+            return results.sort((a, b) => {
+                const aEng = a.english.toLowerCase();
+                const bEng = b.english.toLowerCase();
+                const aBan = a.bangla.toLowerCase();
+                const bBan = b.bangla.toLowerCase();
+
+                // 1. Exact matches (Highest priority)
+                if (aEng === lowerQuery) return -1;
+                if (bEng === lowerQuery) return 1;
+                if (aBan === lowerQuery) return -1;
+                if (bBan === lowerQuery) return 1;
+
+                // 2. Starts with query (High priority)
+                const aStarts = aEng.startsWith(lowerQuery) || aBan.startsWith(lowerQuery);
+                const bStarts = bEng.startsWith(lowerQuery) || bBan.startsWith(lowerQuery);
+
+                if (aStarts && !bStarts) return -1;
+                if (!aStarts && bStarts) return 1;
+
+                // 3. Alphabetical fallback
+                return aEng.localeCompare(bEng);
+            }).slice(0, 50); // Limit after sorting to show best matches
+
         } catch (error) {
             console.error('Failed to search vocabularies in Dexie:', error);
             return [];

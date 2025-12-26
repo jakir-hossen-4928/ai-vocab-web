@@ -2,7 +2,7 @@ import React from 'react';
 import { Vocabulary } from '@/types/vocabulary';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Sparkles, MessageSquare, Activity, Copy, ArrowRightLeft, Languages, Globe } from 'lucide-react';
+import { Sparkles, MessageSquare, Activity, Copy, ArrowRightLeft, Languages, Globe, Heart } from 'lucide-react';
 
 interface ShareableVocabularyCardProps {
     item: Vocabulary;
@@ -113,11 +113,17 @@ export const ShareableVocabularyCard = React.forwardRef<HTMLDivElement, Shareabl
                 </div>
 
                 {/* Footer */}
-                <div className="mt-10 pt-6 border-t border-gray-100 flex flex-col items-center">
+                <div className="mt-10 pt-6 border-t border-gray-100 flex flex-col items-center gap-3">
                     <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50/50 rounded-full border border-blue-100/50">
                         <Globe className="w-3 h-3 text-blue-400" />
                         <span className="text-[10px] items-center text-gray-400 font-medium tracking-wide">
                             Learn more at <span className="text-blue-500 font-bold ml-1">ai-vocabulary-coach.netlify.app</span>
+                        </span>
+                    </div>
+
+                    <div className="flex items-center gap-1 opacity-60">
+                        <span className="text-[9px] text-gray-400 font-medium tracking-widest uppercase flex items-center gap-1">
+                            Developed with <Heart className="w-2.5 h-2.5 text-red-500 fill-current" /> by Jakir Hossen
                         </span>
                     </div>
                 </div>

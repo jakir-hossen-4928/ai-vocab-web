@@ -4,7 +4,8 @@ import {
     where,
     getDocs,
     orderBy,
-    limit
+    limit,
+    onSnapshot
 } from "firebase/firestore";
 import { db as firestore } from "@/lib/firebase";
 import { dexieService } from "@/lib/dexieDb";
@@ -96,27 +97,72 @@ export const syncService = {
 
     syncInterval: null as any,
     onlineListener: null as any,
+    unsubscribeSnapshot: null as (() => void) | null,
 
     /**
-     * Start a background sync manager
+     * Start a real-time background sync manager using onSnapshot
      */
-    startSyncManager(intervalMinutes: number = 10) {
-        if (this.syncInterval) return;
+    startRealtimeSync() {
+        if (this.unsubscribeSnapshot) return;
 
-        // Periodic sync
-        this.syncInterval = setInterval(() => {
-            this.syncVocabularies();
-        }, intervalMinutes * 60 * 1000);
+        console.log("[Sync] Starting real-time sync listener...");
 
-        // Also sync when browser comes back online
+        try {
+            // Listen to recent changes (e.g., last 30 days) to keep initial snapshot small-ish
+            // OR simply listen to the latest "updatedAt" if we want to be very efficient.
+            // For simplicity and robustness, we'll listen to the collection ordered by updatedAt.
+            // To avoid pulling the hole DB on every load, we might want to just listen,
+            // but onSnapshot initial load DOES pull data.
+            // Let's use a query limit to keep it sane for a mobile app.
+
+            const q = query(
+                collection(firestore, "vocabularies"),
+                orderBy("updatedAt", "desc"),
+                limit(100) // Listen to the 100 most recent items for real-time updates
+            );
+
+            this.unsubscribeSnapshot = onSnapshot(q, async (snapshot) => {
+                const changes = snapshot.docChanges();
+                if (changes.length === 0) return;
+
+                console.log(`[Sync] Received real-time update: ${changes.length} changes`);
+
+                const validChanges = changes
+                    .filter(change => change.type === 'added' || change.type === 'modified')
+                    .map(change => ({
+                        id: change.doc.id,
+                        ...(change.doc.data() as any)
+                    })) as Vocabulary[];
+
+                const deletedIds = changes
+                    .filter(change => change.type === 'removed')
+                    .map(change => change.doc.id);
+
+                if (validChanges.length > 0) {
+                    await dexieService.addVocabularies(validChanges);
+                    console.log(`[Sync] Updated ${validChanges.length} items in local DB`);
+                }
+
+                if (deletedIds.length > 0) {
+                    await dexieService.deleteVocabularies(deletedIds); // Ensure bulk delete exists or loop
+                    console.log(`[Sync] Removed ${deletedIds.length} items from local DB`);
+                }
+
+                await dexieService.updateSyncMetadata(SYNC_KEY);
+            }, (error) => {
+                console.error("[Sync] Real-time listener error:", error);
+            });
+
+        } catch (error) {
+            console.error("[Sync] Failed to start real-time sync:", error);
+        }
+
+        // Also sync when browser comes back online to catch up
         this.onlineListener = () => {
-            console.log("[Sync] Device back online, triggered sync...");
+            console.log("[Sync] Device back online, triggered full sync...");
             this.syncVocabularies();
         };
         window.addEventListener('online', this.onlineListener);
-
-        // Initial sync on startup
-        this.syncVocabularies();
     },
 
     /**
@@ -126,6 +172,11 @@ export const syncService = {
         if (this.syncInterval) {
             clearInterval(this.syncInterval);
             this.syncInterval = null;
+        }
+        if (this.unsubscribeSnapshot) {
+            this.unsubscribeSnapshot();
+            this.unsubscribeSnapshot = null;
+            console.log("[Sync] Stopped real-time listener");
         }
         if (this.onlineListener) {
             window.removeEventListener('online', this.onlineListener);

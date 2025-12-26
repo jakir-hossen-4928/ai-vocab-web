@@ -1,26 +1,59 @@
 import { dexieService } from "@/lib/dexieDb";
 import { searchDictionaryAPI, convertDictionaryToVocabulary } from "./dictionaryApiService";
 import { Vocabulary } from "@/types/vocabulary";
+import { searchService } from "./searchService";
 
 export const vocabularyService = {
     /**
-     * Industry-grade search function
-     * 1. Searches local database for instant results
-     * 2. Checks local API cache for previously fetched external results
-     * 3. Falls back to Dictionary API if word not found
-     * 4. Updates search history
+     * Industry-grade search function using MiniSearch (In-Memory Index)
+     * 1. Check/Build Index -> Search Index
+     * 2. Retrieve results from Dexie by ID
+     * 3. Fallback to API/Cache if needed
      */
     async search(query: string): Promise<Vocabulary[]> {
         const lowerQuery = query.toLowerCase().trim();
         if (!lowerQuery) return [];
 
-        // 1. Instant local search (Dexie) - Includes primary, related, and verb forms
-        const localResults = await dexieService.searchVocabularies(lowerQuery, 'all');
+        try {
+            // 0. Ensure Index is built
+            if (!searchService.isIndexed) {
+                console.log("[VocabularyService] Index not found. Building now...");
+                const allVocabs = await dexieService.getAllVocabularies();
+                searchService.buildIndex(allVocabs);
+            }
 
-        // If even one result is found locally, we prioritize it and DON'T search online
-        if (localResults.length > 0) {
-            await dexieService.addSearchHistory(lowerQuery);
-            return localResults;
+            // 1. Instant Local Search (MiniSearch)
+            const searchResults = searchService.search(lowerQuery);
+
+            if (searchResults && searchResults.length > 0) {
+                // Get full objects for the Top 50 results
+                const topIds = searchResults.slice(0, 50).map(r => r.id);
+                const vocabularies = await dexieService.getVocabulariesByIds(topIds);
+
+                // Preserve order from search results (relevance)
+                const orderedVocabularies = topIds
+                    .map(id => vocabularies.find(v => v.id === id))
+                    .filter((v): v is Vocabulary => !!v);
+
+                if (orderedVocabularies.length > 0) {
+                    await dexieService.addSearchHistory(lowerQuery);
+                    return orderedVocabularies;
+                }
+            }
+
+            // Fallback: If MiniSearch found nothing (e.g. searching for a substring like "ppl" in "apple"),
+            // try the naive Dexie search which does .includes()
+            console.log("[VocabularyService] MiniSearch returned 0 results. Falling back to Dexie substring search.");
+            const fallbackResults = await dexieService.searchVocabularies(lowerQuery);
+            if (fallbackResults.length > 0) {
+                await dexieService.addSearchHistory(lowerQuery);
+                return fallbackResults;
+            }
+
+        } catch (error) {
+            console.error("[VocabularyService] Search error:", error);
+            // Fallback to basic DB search if index fails
+            return await dexieService.searchVocabularies(lowerQuery);
         }
 
         // 2. Check API Cache (Previously fetched online results)
