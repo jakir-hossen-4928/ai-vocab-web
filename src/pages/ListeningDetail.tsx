@@ -69,35 +69,62 @@ const QuestionInput = memo(({ id, value, showResults, isCorrect, answer, number,
     );
 });
 
-const AudioPlayer = memo(({ url }: { url: string }) => (
-    <div className="space-y-4 p-5 rounded-2xl bg-background/80 border border-border/50 shadow-sm backdrop-blur-md">
-        <div className="font-bold text-xs uppercase tracking-wider text-muted-foreground flex items-center justify-between">
-            <span className="flex items-center gap-2"><Play className="h-3 w-3 fill-current" /> Audio Source</span>
-            <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">Standard</span>
-        </div>
+const AudioPlayer = memo(({ url }: { url: string }) => {
+    const isDirectLink = useMemo(() => {
+        if (!url) return false;
+        return url.toLowerCase().endsWith('.mp3') ||
+            url.toLowerCase().endsWith('.ogg') ||
+            url.toLowerCase().endsWith('.wav') ||
+            url.includes('googleusercontent.com') ||
+            url.includes('/uc?id=');
+    }, [url]);
 
-        <div className="rounded-xl overflow-hidden bg-black/5 border border-black/5 shadow-inner relative group isolate aspect-[5/1]">
-            <iframe
-                src={url}
-                className="absolute inset-0 w-full h-full border-0 mix-blend-multiply dark:mix-blend-normal opacity-90 group-hover:opacity-100 transition-opacity"
-                allow="autoplay"
-                title="IELTS Audio"
-                loading="lazy"
-            ></iframe>
-        </div>
+    return (
+        <div className="space-y-4 p-5 rounded-2xl bg-background/80 border border-border/50 shadow-sm backdrop-blur-md">
+            <div className="font-bold text-xs uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                <span className="flex items-center gap-2"><Play className="h-3 w-3 fill-current" /> Audio Source</span>
+                <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">
+                    {isDirectLink ? "Direct Stream" : "Google Drive Preview"}
+                </span>
+            </div>
 
-        <div className="flex justify-end">
-            <a
-                href={url.replace('/preview', '/view')}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary/80 hover:text-primary transition-colors hover:underline"
-            >
-                Open in split window <BookOpen className="h-3 w-3" />
-            </a>
+            <div className="rounded-xl overflow-hidden bg-black/5 border border-black/5 shadow-inner relative group isolate">
+                {isDirectLink ? (
+                    <div className="p-4 flex items-center justify-center min-h-[60px]">
+                        <audio
+                            src={url}
+                            controls
+                            className="w-full h-10 accent-primary"
+                        >
+                            Your browser does not support the audio element.
+                        </audio>
+                    </div>
+                ) : (
+                    <div className="aspect-[5/1] relative">
+                        <iframe
+                            src={url}
+                            className="absolute inset-0 w-full h-full border-0 mix-blend-multiply dark:mix-blend-normal opacity-90 group-hover:opacity-100 transition-opacity"
+                            allow="autoplay"
+                            title="IELTS Audio"
+                            loading="lazy"
+                        ></iframe>
+                    </div>
+                )}
+            </div>
+
+            <div className="flex justify-end">
+                <a
+                    href={url.replace('/preview', '/view')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary/80 hover:text-primary transition-colors hover:underline"
+                >
+                    Open in split window <BookOpen className="h-3 w-3" />
+                </a>
+            </div>
         </div>
-    </div>
-));
+    );
+});
 
 // --- Main Component ---
 

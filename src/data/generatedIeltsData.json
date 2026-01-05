@@ -1,25 +1,4 @@
-export interface ListeningQuestion {
-    id: number;
-    number: number;
-    beforeInput: string;
-    afterInput: string;
-    answer: string;
-}
-
-export interface ListeningSection {
-    title: string;
-    instruction: string;
-    questions: ListeningQuestion[];
-}
-
-export interface ListeningTest {
-    id: string;
-    title: string;
-    audioUrl: string;
-    sections: ListeningSection[];
-}
-
-export const listeningTests: ListeningTest[] = [
+[
   {
     "id": "test-1",
     "title": "Listening Test 1",
@@ -5226,10 +5205,4 @@ export const listeningTests: ListeningTest[] = [
       }
     ]
   }
-];
-
-// Helper to paginate (client-side matching Firestore limit logic if needed)
-export function getPaginatedTests(page: number, limit: number): ListeningTest[] {
-    const start = (page - 1) * limit;
-    return listeningTests.slice(start, start + limit);
-}
+]
