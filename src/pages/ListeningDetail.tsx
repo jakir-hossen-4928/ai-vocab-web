@@ -31,6 +31,17 @@ const QuestionInput = memo(({ id, value, showResults, isCorrect, answer, number,
                 <Input
                     value={value || ""}
                     onChange={(e) => onChange(id, e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const nextIndex = number + 1;
+                            const nextInput = document.querySelector(`input[data-question-index="${nextIndex}"]`) as HTMLInputElement;
+                            if (nextInput) {
+                                nextInput.focus();
+                            }
+                        }
+                    }}
+                    data-question-index={number}
                     className={`h-9 w-[180px] min-w-[140px] text-lg font-bold px-2 text-center transition-all duration-300
                         border-0 border-b-[3px] rounded-t-lg rounded-b-none
                         focus:ring-0 focus:ring-offset-0 

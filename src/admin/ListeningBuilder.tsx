@@ -5,7 +5,7 @@ import { ListeningTest, ListeningSection, ListeningQuestion } from "@/data/liste
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Save, MoreVertical, Search, Upload, LayoutGrid, LayoutList, Music, Check, X, Wand2, ArrowLeft, FileText } from "lucide-react";
+import { Plus, Trash2, Save, MoreVertical, Search, Upload, LayoutGrid, LayoutList, Music, Check, X, Wand2, ArrowLeft, FileText, ChevronLeft, ChevronRight, AlertCircle, RefreshCw, Copy } from "lucide-react";
 import { toast } from "sonner";
 import {
     Dialog,
@@ -226,6 +226,66 @@ const ListeningBuilder = () => {
     const [debouncedSearch, setDebouncedSearch] = useState("");
     const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
     const [bulkJson, setBulkJson] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [bulkConflictMode, setBulkConflictMode] = useState<'skip' | 'overwrite'>('skip');
+    const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
+    const ITEMS_PER_PAGE = 24;
+
+    // Sanitization utility
+    const sanitizeData = (data: any[]): any[] => {
+        return data.map(test => ({
+            ...test,
+            title: test.title?.trim() || "",
+            id: test.id?.trim() || crypto.randomUUID(),
+            sections: test.sections?.map((section: any) => ({
+                ...section,
+                title: section.title?.trim() || "",
+                instruction: section.instruction?.trim() || "",
+                questions: section.questions?.map((q: any) => ({
+                    ...q,
+                    answer: q.answer?.trim() || "",
+                    beforeInput: q.beforeInput?.trim() || "",
+                    afterInput: q.afterInput?.trim() || ""
+                }))
+            }))
+        }));
+    };
+
+    const bulkAnalysis = useMemo(() => {
+        if (!isBulkUploadOpen || !bulkJson.trim()) return { valid: [], duplicates: [], errors: [] };
+        try {
+            const parsed = JSON.parse(bulkJson);
+            if (!Array.isArray(parsed)) return { valid: [], duplicates: [], errors: ["Root must be an array of tests"] };
+
+            const sanitized = sanitizeData(parsed);
+            const valid: any[] = [];
+            const duplicates: any[] = [];
+            const errors: string[] = [];
+
+            sanitized.forEach((test, index) => {
+                const validation = listeningService.validateTest(test);
+                if (!validation.success) {
+                    errors.push(`Test #${index + 1} (${test.title || 'Untitled'}): ${validation.error}`);
+                } else {
+                    const exists = allTests.some(t => t.id === test.id);
+                    if (exists) {
+                        duplicates.push(test);
+                    } else {
+                        valid.push(test);
+                    }
+                }
+            });
+
+            return { valid, duplicates, errors };
+        } catch (e) {
+            return { valid: [], duplicates: [], errors: ["Invalid JSON format"] };
+        }
+    }, [bulkJson, isBulkUploadOpen, allTests]);
+
+    // Reset to page 1 when search changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [debouncedSearch]);
 
     // Debounce search input for performance with large datasets
     useEffect(() => {
@@ -247,13 +307,43 @@ const ListeningBuilder = () => {
     });
 
     const filteredTests = useMemo(() => {
-        if (!debouncedSearch) return allTests;
-        const search = debouncedSearch.toLowerCase();
-        return allTests.filter(t =>
-            t.title.toLowerCase().includes(search) ||
-            t.id.toLowerCase().includes(search)
-        );
-    }, [allTests, debouncedSearch]);
+        let result = allTests;
+
+        if (showDuplicatesOnly) {
+            const idCounts = allTests.reduce((acc, t) => {
+                acc[t.id] = (acc[t.id] || 0) + 1;
+                return acc;
+            }, {} as Record<string, number>);
+            result = result.filter(t => idCounts[t.id] > 1);
+        }
+
+        if (debouncedSearch) {
+            const search = debouncedSearch.toLowerCase();
+            result = result.filter(t =>
+                t.title.toLowerCase().includes(search) ||
+                t.id.toLowerCase().includes(search)
+            );
+        }
+
+        return result;
+    }, [allTests, debouncedSearch, showDuplicatesOnly]);
+
+    // Count pure duplicates for badge
+    const duplicateCount = useMemo(() => {
+        const idCounts = allTests.reduce((acc, t) => {
+            acc[t.id] = (acc[t.id] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+        return Object.values(idCounts).filter(count => count > 1).length;
+    }, [allTests]);
+
+    // Pagination calculations
+    const paginatedTests = useMemo(() => {
+        const start = (currentPage - 1) * ITEMS_PER_PAGE;
+        return filteredTests.slice(start, start + ITEMS_PER_PAGE);
+    }, [filteredTests, currentPage]);
+
+    const totalPages = Math.ceil(filteredTests.length / ITEMS_PER_PAGE);
 
     const updateTestMutation = useMutation({
         mutationFn: (test: ListeningTest) => listeningService.saveTest(test),
@@ -272,6 +362,23 @@ const ListeningBuilder = () => {
             queryClient.invalidateQueries({ queryKey: ['ielts-admin-all'] });
             if (selectedTest) setSelectedTest(null);
         }
+    });
+
+    const duplicateTestMutation = useMutation({
+        mutationFn: async (test: ListeningTest) => {
+            const newTest = {
+                ...test,
+                id: `${test.id}-copy-${Date.now().toString().slice(-4)}`,
+                title: `${test.title} (Copy)`
+            };
+            await listeningService.saveTest(newTest);
+            return newTest;
+        },
+        onSuccess: () => {
+            toast.success("Test duplicated!");
+            queryClient.invalidateQueries({ queryKey: ['ielts-admin-all'] });
+        },
+        onError: () => toast.error("Failed to duplicate")
     });
 
     const batchAudioUpdateMutation = useMutation({
@@ -315,16 +422,32 @@ const ListeningBuilder = () => {
 
     // --- Bulk Upload ---
     const handleBulkUpload = async () => {
+        const { valid, duplicates, errors } = bulkAnalysis;
+        if (errors.length > 0) {
+            return toast.error("Please fix validation errors before importing");
+        }
+
+        let toUpload = [...valid];
+        if (bulkConflictMode === 'overwrite') {
+            toUpload = [...toUpload, ...duplicates];
+        }
+
+        if (toUpload.length === 0) {
+            return toast.error("No tests to upload");
+        }
+
         try {
-            const data = JSON.parse(bulkJson);
-            if (!Array.isArray(data)) throw new Error("Root must be array");
-            await listeningService.bulkAddTests(data);
-            toast.success("Uploaded successfully");
-            setIsBulkUploadOpen(false);
-            setBulkJson("");
-            queryClient.invalidateQueries({ queryKey: ['ielts-admin-all'] });
+            const res = await listeningService.bulkAddTests(toUpload);
+            if (res.errors.length > 0) {
+                toast.error(`Uploaded with ${res.errors.length} errors`);
+            } else {
+                toast.success(`Successfully uploaded ${res.added} tests`);
+                setIsBulkUploadOpen(false);
+                setBulkJson("");
+                queryClient.invalidateQueries({ queryKey: ['ielts-admin-all'] });
+            }
         } catch (e) {
-            toast.error("Invalid JSON");
+            toast.error("Bulk upload failed");
         }
     };
 
@@ -521,6 +644,17 @@ const ListeningBuilder = () => {
                     <p className="text-muted-foreground text-sm">Manage listening practice materials</p>
                 </div>
                 <div className="flex items-center gap-3">
+                    {duplicateCount > 0 && (
+                        <Button
+                            variant={showDuplicatesOnly ? "destructive" : "outline"}
+                            size="sm"
+                            onClick={() => setShowDuplicatesOnly(!showDuplicatesOnly)}
+                            className={`gap-2 ${!showDuplicatesOnly ? "border-orange-500 text-orange-600 hover:bg-orange-50" : ""}`}
+                        >
+                            <AlertCircle className="h-4 w-4" />
+                            {showDuplicatesOnly ? "Showing Duplicates" : `${duplicateCount} Duplicates Hidden`}
+                        </Button>
+                    )}
                     <AudioUpdaterDialog tests={allTests} onUpdate={(updates) => batchAudioUpdateMutation.mutateAsync(updates)} />
                     <Button variant="outline" className="gap-2" onClick={() => setIsBulkUploadOpen(true)}>
                         <Upload className="h-4 w-4" /> Bulk Upload
@@ -563,30 +697,58 @@ const ListeningBuilder = () => {
                     <>
                         <div className="flex items-center justify-between mb-4">
                             <p className="text-sm text-muted-foreground">
-                                Showing {Math.min(filteredTests.length, 24)} of {filteredTests.length} tests
+                                Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, filteredTests.length)} of {filteredTests.length} tests
                             </p>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {filteredTests.slice(0, 24).map((test) => (
+                            {paginatedTests.map((test) => (
                                 <Card
                                     key={test.id}
                                     className="group cursor-pointer hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300 border-dashed hover:border-solid"
                                     onClick={() => setSelectedTest(test)}
                                 >
-                                    <div className="p-6 h-48 flex flex-col justify-between bg-gradient-to-br from-muted/30 to-transparent group-hover:from-primary/5 transition-colors">
+                                    <div className="p-6 h-48 flex flex-col justify-between bg-gradient-to-br from-muted/30 to-transparent group-hover:from-primary/5 transition-colors relative">
                                         <div className="flex justify-between items-start">
                                             <Badge variant="outline" className="bg-background/50 backdrop-blur">
                                                 {test.sections.reduce((acc, s) => acc + s.questions.length, 0)} Qs
                                             </Badge>
-                                            {test.audioUrl ? (
-                                                <div className="h-8 w-8 rounded-full bg-green-500/10 text-green-600 flex items-center justify-center">
-                                                    <Check className="h-4 w-4" />
-                                                </div>
-                                            ) : (
-                                                <div className="h-8 w-8 rounded-full bg-orange-500/10 text-orange-600 flex items-center justify-center">
-                                                    <X className="h-4 w-4" />
-                                                </div>
-                                            )}
+
+                                            <div className="flex items-center gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity rounded-full hover:bg-primary/10 hover:text-primary"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        duplicateTestMutation.mutate(test);
+                                                    }}
+                                                    title="Duplicate Test"
+                                                >
+                                                    <Copy className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity rounded-full hover:bg-destructive/10 hover:text-destructive"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (confirm("Delete this test?")) deleteTestMutation.mutate(test.id);
+                                                    }}
+                                                    title="Delete Test"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+
+                                                {test.audioUrl ? (
+                                                    <div className="h-8 w-8 rounded-full bg-green-500/10 text-green-600 flex items-center justify-center">
+                                                        <Check className="h-4 w-4" />
+                                                    </div>
+                                                ) : (
+                                                    <div className="h-8 w-8 rounded-full bg-orange-500/10 text-orange-600 flex items-center justify-center">
+                                                        <X className="h-4 w-4" />
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                         <div>
                                             <h3 className="font-bold text-lg line-clamp-2 leading-tight group-hover:text-primary transition-colors">{test.title}</h3>
@@ -602,6 +764,56 @@ const ListeningBuilder = () => {
                                 </Card>
                             ))}
                         </div>
+
+                        {/* Pagination Controls */}
+                        {totalPages > 1 && (
+                            <div className="mt-8 flex items-center justify-center gap-4">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={currentPage === 1}
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    className="gap-2"
+                                >
+                                    <ChevronLeft className="h-4 w-4" /> Previous
+                                </Button>
+                                <div className="flex items-center gap-1">
+                                    {Array.from({ length: Math.min(5, totalPages) }).map((_, i) => {
+                                        let pageNum: number;
+                                        if (totalPages <= 5) {
+                                            pageNum = i + 1;
+                                        } else if (currentPage <= 3) {
+                                            pageNum = i + 1;
+                                        } else if (currentPage >= totalPages - 2) {
+                                            pageNum = totalPages - 4 + i;
+                                        } else {
+                                            pageNum = currentPage - 2 + i;
+                                        }
+
+                                        return (
+                                            <Button
+                                                key={pageNum}
+                                                variant={currentPage === pageNum ? "default" : "outline"}
+                                                size="sm"
+                                                className="w-9"
+                                                onClick={() => setCurrentPage(pageNum)}
+                                            >
+                                                {pageNum}
+                                            </Button>
+                                        );
+                                    })}
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={currentPage === totalPages}
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    className="gap-2"
+                                >
+                                    Next <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        )}
                     </>
                 )}
             </div>
@@ -695,18 +907,126 @@ const ListeningBuilder = () => {
                         </div>
 
                         {/* JSON Textarea */}
-                        <Textarea
-                            value={bulkJson}
-                            onChange={(e) => setBulkJson(e.target.value)}
-                            placeholder={`[\n  {\n    "id": "test-001",\n    "title": "IELTS Listening Test 1",\n    "audioUrl": "https://example.com/audio/test1.mp3",\n    "sections": [\n      {\n        "title": "Part 1",\n        "instruction": "Questions 1-5: Complete the form.",\n        "questions": [\n          {\n            "id": 1,\n            "number": 1,\n            "beforeInput": "Name:",\n            "answer": "John Smith",\n            "afterInput": ""\n          }\n        ]\n      }\n    ]\n  }\n]`}
-                            className="min-h-[400px] font-mono text-xs bg-muted/20 border-2 resize-none"
-                        />
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div className="space-y-4">
+                                <Label className="text-sm font-bold flex items-center gap-2">
+                                    <FileText className="h-4 w-4" /> JSON Input
+                                </Label>
+                                <Textarea
+                                    value={bulkJson}
+                                    onChange={(e) => setBulkJson(e.target.value)}
+                                    placeholder={`[\n  {\n    "id": "test-001",\n    "title": "IELTS Listening Test 1",\n    ...\n  }\n]`}
+                                    className="h-[500px] font-mono text-[10px] bg-muted/20 border-2 resize-none focus:bg-background transition-all"
+                                />
+                            </div>
+
+                            <div className="flex flex-col h-[550px] space-y-4">
+                                <Label className="text-sm font-bold flex items-center gap-2">
+                                    <Check className="h-4 w-4" /> Preview & Analysis
+                                </Label>
+
+                                <div className="flex-1 border-2 rounded-xl bg-muted/10 overflow-hidden flex flex-col">
+                                    <div className="p-3 bg-muted/50 border-b flex items-center justify-between text-xs font-bold uppercase tracking-wider">
+                                        <span>Status Panel</span>
+                                        <div className="flex gap-3">
+                                            <span className="text-green-600">New: {bulkAnalysis.valid.length}</span>
+                                            <span className="text-orange-600">Dup: {bulkAnalysis.duplicates.length}</span>
+                                            <span className="text-red-600">Err: {bulkAnalysis.errors.length}</span>
+                                        </div>
+                                    </div>
+
+                                    <ScrollArea className="flex-1 p-4">
+                                        {bulkAnalysis.errors.length > 0 && (
+                                            <div className="mb-6 space-y-2">
+                                                <h4 className="text-xs font-black text-red-600 uppercase flex items-center gap-2">
+                                                    <AlertCircle className="h-3 w-3" /> Errors ({bulkAnalysis.errors.length})
+                                                </h4>
+                                                {bulkAnalysis.errors.map((err, i) => (
+                                                    <div key={i} className="p-2 rounded bg-red-500/10 text-red-600 text-[10px] border border-red-200/50">
+                                                        {err}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {bulkAnalysis.duplicates.length > 0 && (
+                                            <div className="mb-6 space-y-2">
+                                                <h4 className="text-xs font-black text-orange-600 uppercase flex items-center gap-2">
+                                                    <RefreshCw className="h-3 w-3" /> Existing IDs ({bulkAnalysis.duplicates.length})
+                                                </h4>
+                                                <div className="grid grid-cols-1 gap-1">
+                                                    {bulkAnalysis.duplicates.map((t, i) => (
+                                                        <div key={i} className="text-[10px] flex items-center gap-2 p-1.5 rounded bg-orange-500/5 border border-orange-200/30">
+                                                            <Badge variant="outline" className="text-[9px] h-4 bg-orange-100">DUP</Badge>
+                                                            <span className="font-mono opacity-60 truncate max-w-[80px]">{t.id}</span>
+                                                            <span className="truncate font-medium">{t.title}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {bulkAnalysis.valid.length > 0 && (
+                                            <div className="space-y-2">
+                                                <h4 className="text-xs font-black text-green-600 uppercase flex items-center gap-2">
+                                                    <Check className="h-3 w-3" /> New Tests ({bulkAnalysis.valid.length})
+                                                </h4>
+                                                <div className="grid grid-cols-1 gap-1">
+                                                    {bulkAnalysis.valid.map((t, i) => (
+                                                        <div key={i} className="text-[10px] flex items-center gap-2 p-1.5 rounded bg-green-500/5 border border-green-200/30">
+                                                            <Badge variant="outline" className="text-[9px] h-4 bg-green-100">NEW</Badge>
+                                                            <span className="font-mono opacity-60 truncate max-w-[80px]">{t.id}</span>
+                                                            <span className="truncate font-medium">{t.title}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {!bulkJson.trim() && (
+                                            <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-50 space-y-3 py-20">
+                                                <Upload className="h-10 w-10 animate-bounce" />
+                                                <p className="text-sm font-medium">Paste JSON to start analysis</p>
+                                            </div>
+                                        )}
+                                    </ScrollArea>
+                                </div>
+
+                                {bulkAnalysis.duplicates.length > 0 && (
+                                    <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-xl p-4">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-xs font-bold text-orange-800 dark:text-orange-200">Conflict Management</p>
+                                                <p className="text-[10px] text-orange-600">ID collisions detected. Choose action:</p>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    size="sm"
+                                                    variant={bulkConflictMode === 'skip' ? 'default' : 'outline'}
+                                                    onClick={() => setBulkConflictMode('skip')}
+                                                    className="h-8 text-[10px] px-3 font-bold"
+                                                >
+                                                    Skip Duplicates
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant={bulkConflictMode === 'overwrite' ? 'destructive' : 'outline'}
+                                                    onClick={() => setBulkConflictMode('overwrite')}
+                                                    className="h-8 text-[10px] px-3 font-bold"
+                                                >
+                                                    Overwrite
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
 
                         {/* Tip Section */}
                         <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                             <p className="text-sm text-blue-900 dark:text-blue-100">
-                                💡 <strong>Pro Tip:</strong> After uploading tests with placeholder audio URLs, use the{" "}
-                                <strong className="text-primary">"Audio Script"</strong> button on the dashboard to batch update audio URLs for multiple tests at once!
+                                💡 <strong>Pro Tip:</strong> Ensure your JSON follows the required schema. Sanitization will automatically trim extra spaces from titles and answers.
                             </p>
                         </div>
                     </div>
@@ -718,11 +1038,11 @@ const ListeningBuilder = () => {
                         </Button>
                         <Button
                             onClick={handleBulkUpload}
-                            disabled={!bulkJson.trim()}
-                            className="gap-2"
+                            disabled={!bulkJson.trim() || bulkAnalysis.errors.length > 0 || (bulkAnalysis.valid.length === 0 && (bulkAnalysis.duplicates.length === 0 || bulkConflictMode === 'skip'))}
+                            className="gap-2 min-w-[140px]"
                         >
                             <Upload className="h-4 w-4" />
-                            Import Tests
+                            {bulkAnalysis.errors.length > 0 ? "Fix Errors" : `Import ${bulkAnalysis.valid.length + (bulkConflictMode === 'overwrite' ? bulkAnalysis.duplicates.length : 0)} Tests`}
                         </Button>
                     </div>
                 </DialogContent>
@@ -731,83 +1051,6 @@ const ListeningBuilder = () => {
     );
 };
 
-function BulkUploadDialog({ onUpload, isOpen, onOpenChange }: {
-    onUpload: (data: any[]) => Promise<void>,
-    isOpen: boolean,
-    onOpenChange: (open: boolean) => void
-}) {
-    const [jsonText, setJsonText] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const result = event.target?.result as string;
-            setJsonText(result);
-            toast.success("File content loaded");
-            e.target.value = "";
-        };
-        reader.readAsText(file);
-    };
-
-    const handleProcess = async () => {
-        if (!jsonText.trim()) {
-            toast.error("Please provide JSON data");
-            return;
-        }
-
-        setIsLoading(true);
-        try {
-            const parsed = JSON.parse(jsonText);
-            if (!Array.isArray(parsed)) {
-                throw new Error("Must be array");
-            }
-            await onUpload(parsed);
-            setJsonText("");
-            onOpenChange(false);
-        } catch (e) {
-            console.error(e);
-            toast.error("Invalid JSON");
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    return (
-        <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-2xl">
-                <DialogHeader>
-                    <DialogTitle>Bulk Upload Tests</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <div className="flex items-center justify-center w-full">
-                        <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted hover:bg-muted/50 transition-colors">
-                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
-                                <p className="text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag JSON</p>
-                            </div>
-                            <input id="dropzone-file" type="file" accept=".json" className="hidden" onChange={handleFileChange} />
-                        </label>
-                    </div>
-                    <Textarea
-                        placeholder="Paste JSON array..."
-                        className="font-mono text-xs min-h-[200px]"
-                        value={jsonText}
-                        onChange={(e) => setJsonText(e.target.value)}
-                    />
-                </div>
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                    <Button onClick={handleProcess} disabled={isLoading}>
-                        {isLoading ? "Processing..." : "Import"}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
-}
+// BulkUploadDialog removed in favor of integrated version above
 
 export default ListeningBuilder;
