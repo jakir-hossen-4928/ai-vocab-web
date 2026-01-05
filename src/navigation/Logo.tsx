@@ -12,7 +12,7 @@ export const Logo = ({ onOpenChange, isCollapsed = false }: LogoProps) => {
     const { haptic } = useNative();
     const [isHovered, setIsHovered] = useState(false);
     const [displayText, setDisplayText] = useState("Ai Vocab");
-    const targetText = "IELTS";
+    const targetText = "Listening";
 
     useEffect(() => {
         let interval: NodeJS.Timeout;
@@ -46,10 +46,10 @@ export const Logo = ({ onOpenChange, isCollapsed = false }: LogoProps) => {
                 onClick={handleClick}
                 className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-white font-bold text-xl cursor-pointer hover:scale-105 active:scale-95 transition-all shadow-lg group relative"
             >
-                {isHovered ? "I" : "A"}
+                {isHovered ? "L" : "A"}
                 {/* Tooltip for collapsed state */}
                 <div className="absolute left-full ml-3 px-2 py-1 bg-popover text-popover-foreground text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none border shadow-sm">
-                    {isHovered ? "IELTS" : "Ai Vocab"}
+                    {isHovered ? "Listening" : "Ai Vocab"}
                 </div>
             </div>
         );

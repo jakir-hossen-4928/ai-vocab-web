@@ -2,6 +2,7 @@ import Dexie, { Table } from 'dexie';
 import { Vocabulary } from '@/types/vocabulary';
 import { GrammarImage } from '@/types/grammar';
 import { searchService } from '@/services/searchService';
+import { ListeningTest } from '@/data/listeningData';
 
 // Chat-related interfaces
 export interface ChatMessage {
@@ -70,11 +71,12 @@ export class VocabularyDatabase extends Dexie {
     syncMetadata!: Table<SyncMetadata, string>;
     searchHistory!: Table<SearchHistory, number>;
     apiCache!: Table<ApiCache, string>;
+    listeningTests!: Table<ListeningTest, string>;
 
     constructor() {
         super('VocabularyAppDB');
 
-        this.version(3).stores({
+        this.version(4).stores({
             vocabularies: 'id, english, bangla, partOfSpeech, createdAt, updatedAt, userId',
             resources: 'id, title, createdAt, userId',
             chatSessions: 'id, vocabularyId, updatedAt',
@@ -82,7 +84,16 @@ export class VocabularyDatabase extends Dexie {
             flashcardProgress: 'id, lastReviewed, nextReviewDate',
             syncMetadata: 'key, lastSyncedAt',
             searchHistory: '++id, query, timestamp',
-            apiCache: 'id, timestamp'
+            apiCache: 'id, timestamp',
+            apiCache: 'id, timestamp',
+            // ieltsTests: 'id, title' // Deprecated in v5
+        });
+
+        this.version(5).stores({
+            listeningTests: 'id, title',
+            ieltsTests: null // Delete old table
+        }).upgrade(async tx => {
+            // Optional: Migrate data if needed. For now, we start fresh or relying on sync.
         });
     }
 }
@@ -662,6 +673,59 @@ export const dexieService = {
         } catch (error) {
             console.error('Failed to cache word in Dexie:', error);
         }
+    },
+
+    // ==================== LISTENING TESTS ====================
+    async getAllListeningTests(): Promise<ListeningTest[]> {
+        try {
+            return await db.listeningTests
+                .toArray();
+        } catch (error) {
+            console.error('Failed to get listening tests from Dexie:', error);
+            return [];
+        }
+    },
+
+    async getListeningTest(id: string): Promise<ListeningTest | undefined> {
+        try {
+            return await db.listeningTests.get(id);
+        } catch (error) {
+            console.error('Failed to get listening test from Dexie:', error);
+            return undefined;
+        }
+    },
+
+    async saveListeningTest(test: ListeningTest): Promise<void> {
+        try {
+            await db.listeningTests.put(test);
+        } catch (error) {
+            console.error('Failed to save listening test to Dexie:', error);
+        }
+    },
+
+    async saveListeningTests(tests: ListeningTest[]): Promise<void> {
+        try {
+            await db.listeningTests.bulkPut(tests);
+        } catch (error) {
+            console.error('Failed to bulk save listening tests to Dexie:', error);
+        }
+    },
+
+    async deleteListeningTest(id: string): Promise<void> {
+        try {
+            await db.listeningTests.delete(id);
+        } catch (error) {
+            console.error('Failed to delete listening test from Dexie:', error);
+        }
+    },
+
+    async clearListeningTests(): Promise<void> {
+        try {
+            await db.listeningTests.clear();
+        } catch (error) {
+            console.error('Failed to clear listening tests from Dexie:', error);
+        }
     }
 };
+
 

@@ -33,6 +33,12 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // IELTS Listings collection
+    match /ielts-listings/{testId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
     // Grammar Images collection
     match /grammar_images/{imageId} {
       allow read: if isAuthenticated();

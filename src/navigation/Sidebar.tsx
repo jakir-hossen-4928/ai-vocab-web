@@ -1,4 +1,4 @@
-import { Home, BookOpen, GraduationCap, User, Activity, Globe, Shield, Users, LogOut, BarChart, Layers, Upload, Heart, Plus, Wand2, ChevronLeft, ChevronRight, LayoutDashboard, Database, Settings, Download, Search, Gift, Printer } from "lucide-react";
+import { Home, BookOpen, GraduationCap, User, Activity, Globe, Shield, Users, LogOut, BarChart, Layers, Upload, Heart, Plus, Wand2, ChevronLeft, ChevronRight, LayoutDashboard, Database, Settings, Download, Search, Gift, Printer, Headphones } from "lucide-react";
 import { NavLink } from "@/navigation/NavLink";
 import { useNative } from "@/hooks/useNative";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,6 +20,7 @@ const mainNavItems = [
     { path: "/flashcards", icon: Layers, label: "Flashcards" },
     { path: "/dictionary", icon: Globe, label: "Dictionary" },
     { path: "/resources", icon: GraduationCap, label: "Resources" },
+    { path: "/ielts-listing", icon: Headphones, label: "IELTS Listening" },
     { path: "/print", icon: Printer, label: "Print Vocabulary" },
     { path: "/surprise", icon: Gift, label: "Special Gift 🎁" },
     { path: "/profile", icon: User, label: "Profile" },
@@ -34,6 +35,7 @@ const adminNavItems = [
     { path: "/admin/resources", icon: GraduationCap, label: "Resources Manager" },
     { path: "/admin/duplicates", icon: Shield, label: "Duplicate Manager" },
     { path: "/vocabularies/bulk-add", icon: Upload, label: "Bulk Upload" },
+    { path: "/admin/ielts-listening-builder", icon: Headphones, label: "IELTS Listening Builder" },
 ];
 
 export const Sidebar = () => {

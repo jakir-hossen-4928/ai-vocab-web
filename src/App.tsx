@@ -27,6 +27,7 @@ const VocabularyDetail = lazy(() => import("./pages/VocabularyDetail"));
 const ResourceDetail = lazy(() => import("./pages/ResourceDetail"));
 const ResourcesGallery = lazy(() => import("./pages/ResourcesGallery"));
 const AdminUsers = lazy(() => import("./admin/AdminUsers"));
+const Tools = lazy(() => import("./admin/AdminTools")); // Assuming this was AdminTools
 const AdminTools = lazy(() => import("./admin/AdminTools"));
 const Favorites = lazy(() => import("./pages/Favorites"));
 const DuplicateManager = lazy(() => import("./admin/DuplicateManager"));
@@ -39,7 +40,9 @@ const OnlineDictionary = lazy(() => import("./pages/OnlineDictionary"));
 const Flashcards = lazy(() => import("./pages/Flashcards"));
 const DownloadPage = lazy(() => import("./pages/DownloadPage"));
 const MeetDeveloper = lazy(() => import("./pages/MeetDeveloper"));
-
+const ListeningList = lazy(() => import("./pages/ListeningList"));
+const ListeningDetail = lazy(() => import("./pages/ListeningDetail"));
+const ListeningBuilder = lazy(() => import("./admin/ListeningBuilder"));
 
 const queryClient = new QueryClient();
 
@@ -86,6 +89,10 @@ const AppRoutes = () => {
           <Route path="/flashcards" element={<ProtectedRoute><Flashcards /></ProtectedRoute>} />
           <Route path="/surprise" element={<ProtectedRoute><MeetDeveloper /></ProtectedRoute>} />
 
+          {/* Listening Routes */}
+          <Route path="/ielts-listing" element={<ProtectedRoute><ListeningList /></ProtectedRoute>} />
+          <Route path="/ielts-listing/:id" element={<ProtectedRoute><ListeningDetail /></ProtectedRoute>} />
+
           {/* Redirects from old grammar routes to new resources routes */}
           <Route path="/grammar" element={<Navigate to="/resources" replace />} />
           <Route path="/grammar/:id" element={<Navigate to="/resources/:id" replace />} />
@@ -101,8 +108,7 @@ const AppRoutes = () => {
           <Route path="/print" element={<ProtectedRoute><PrintVocabulary /></ProtectedRoute>} />
           <Route path="/admin/duplicates" element={<AdminRoute><DuplicateManager /></AdminRoute>} />
 
-
-
+          <Route path="/admin/ielts-listening-builder" element={<AdminRoute><ListeningBuilder /></AdminRoute>} />
 
           <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
@@ -111,8 +117,6 @@ const AppRoutes = () => {
     </Suspense>
   );
 };
-
-
 
 import { ShareProvider } from "@/contexts/ShareContext";
 import { GlobalShareProxy } from "@/components/GlobalShareProxy";

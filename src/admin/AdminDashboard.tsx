@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useVocabularies } from "@/hooks/useVocabularies";
 import { useResourcesSimple } from "@/hooks/useResources";
+import { listeningService } from "@/services/listeningService";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -53,7 +54,8 @@ import {
     Sparkles,
     BarChart3,
     PieChart as PieChartIcon,
-    FileDown
+    FileDown,
+    Headphones
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -150,6 +152,7 @@ export default function AdminDashboard() {
     const [timeRange, setTimeRange] = useState<'week' | 'month'>('week');
     const [userRoles, setUserRoles] = useState<any[]>([]);
     const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+    const [ieltsStats, setIeltsStats] = useState({ totalTests: 0 });
 
     // Fetch user roles
     useEffect(() => {
@@ -168,7 +171,18 @@ export default function AdminDashboard() {
                 setIsLoadingUsers(false);
             }
         };
+
+        const fetchIeltsStats = async () => {
+            try {
+                const stats = await listeningService.getDataStats();
+                setIeltsStats(stats);
+            } catch (e) {
+                console.error("Failed to fetch IELTS stats", e);
+            }
+        }
+
         fetchUserRoles();
+        fetchIeltsStats();
     }, []);
 
     // Advanced Stats Calculations
@@ -542,7 +556,15 @@ export default function AdminDashboard() {
                 {/* OVERVIEW TAB */}
                 <TabsContent value="overview" className="space-y-6">
                     {/* Hero Stats */}
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                        <StatCard
+                            title="IELTS Tests"
+                            value={ieltsStats.totalTests.toString()}
+                            icon={Headphones}
+                            trend="Active"
+                            color="text-red-500"
+                            bgColor="bg-red-50 dark:bg-red-950/20"
+                        />
                         <StatCard
                             title="Total Vocabulary"
                             value={stats?.totalWords.toLocaleString() || '0'}
