@@ -22,7 +22,7 @@ import { generateVocabularyFromWord, generateBanglaMeaning } from "@/services/op
 import { useVocabularyMutations, useVocabularies } from "@/hooks/useVocabularies";
 import { motion } from "framer-motion";
 import PARTS_OF_SPEECH from "@/data/partOfSpeech.json";
-import { checkVocabularyDuplicate } from "@/utils/vocabularyDuplicateChecker";
+import { checkVocabularyDuplicate, normalizeText } from "@/utils/vocabularyDuplicateChecker";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -99,9 +99,42 @@ export default function AddVocabulary() {
     }
   };
 
+  const getDuplicateInfo = () => {
+    if (id) return null; // Skip duplicate check if we're editing
+    if (!formData.english && !formData.bangla) return null;
+
+    const result = checkVocabularyDuplicate(
+      {
+        english: formData.english,
+        bangla: formData.bangla,
+        partOfSpeech: formData.partOfSpeech
+      },
+      existingVocabularies
+    );
+
+    return result;
+  };
+
+  const duplicateInfo = getDuplicateInfo();
+
   const handleGenerate = async () => {
     if (!formData.english) {
       toast.error("Please enter a word first");
+      return;
+    }
+
+    // Check for duplicates before generating
+    const duplicateCheck = checkVocabularyDuplicate(
+      {
+        english: formData.english,
+        partOfSpeech: formData.partOfSpeech
+      },
+      existingVocabularies
+    );
+
+    if (duplicateCheck.isDuplicate && !id) {
+      setDuplicateCheckResult(duplicateCheck);
+      setShowDuplicateDialog(true);
       return;
     }
 
@@ -136,6 +169,21 @@ export default function AddVocabulary() {
       return;
     }
 
+    // Check for duplicates before generating
+    const duplicateCheck = checkVocabularyDuplicate(
+      {
+        english: formData.english,
+        partOfSpeech: formData.partOfSpeech
+      },
+      existingVocabularies
+    );
+
+    if (duplicateCheck.isDuplicate && !id) {
+      setDuplicateCheckResult(duplicateCheck);
+      setShowDuplicateDialog(true);
+      return;
+    }
+
     try {
       setGeneratingBangla(true);
       const banglaMeaning = await generateBanglaMeaning(formData.english);
@@ -162,6 +210,7 @@ export default function AddVocabulary() {
       const duplicateCheck = checkVocabularyDuplicate(
         {
           english: formData.english,
+          bangla: formData.bangla,
           partOfSpeech: formData.partOfSpeech
         },
         existingVocabularies
@@ -294,9 +343,16 @@ export default function AddVocabulary() {
             <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
               {/* Bangla First (Mobile-First) */}
               <div className="space-y-2">
-                <Label htmlFor="bangla" className="text-base md:text-sm font-medium">
-                  Bangla Meaning
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="bangla" className="text-base md:text-sm font-medium">
+                    Bangla Meaning
+                  </Label>
+                  {!id && duplicateInfo?.duplicates.some(d => normalizeText(d.bangla) === normalizeText(formData.bangla || "")) && (
+                    <span className="text-[10px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" /> Already exists
+                    </span>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
@@ -312,7 +368,10 @@ export default function AddVocabulary() {
                       }
                       placeholder="e.g. আকস্মিক প্রাপ্তি"
                       required
-                      className="h-12 md:h-10 text-base md:text-sm w-full"
+                      className={`h-12 md:h-10 text-base md:text-sm w-full ${!id && duplicateInfo?.duplicates.some(d => normalizeText(d.bangla) === normalizeText(formData.bangla || ""))
+                        ? "border-amber-300 focus-visible:ring-amber-400"
+                        : ""
+                        }`}
                     />
                   </motion.div>
                   <motion.div
@@ -331,7 +390,7 @@ export default function AddVocabulary() {
                       type="button"
                       size="icon"
                       onClick={handleGenerateBangla}
-                      disabled={generatingBangla || !formData.english}
+                      disabled={generatingBangla || !formData.english || (!id && (duplicateInfo?.duplicates?.length ?? 0) > 0)}
                       className={`
                         h-12 md:h-10 w-12 md:w-10 shrink-0 border-0
                         bg-gradient-to-r from-purple-500 via-violet-500 to-indigo-500
@@ -365,9 +424,16 @@ export default function AddVocabulary() {
 
               {/* English Word Input */}
               <div className="space-y-2">
-                <Label htmlFor="english" className="text-base md:text-sm font-medium">
-                  English Word
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="english" className="text-base md:text-sm font-medium">
+                    English Word
+                  </Label>
+                  {!id && duplicateInfo?.duplicates.some(d => normalizeText(d.english) === normalizeText(formData.english || "")) && (
+                    <span className="text-[10px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" /> Already exists
+                    </span>
+                  )}
+                </div>
                 <Input
                   id="english"
                   value={formData.english}
@@ -376,7 +442,10 @@ export default function AddVocabulary() {
                   }
                   placeholder="e.g. Serendipity"
                   required
-                  className="h-12 md:h-10 text-base md:text-sm"
+                  className={`h-12 md:h-10 text-base md:text-sm ${!id && duplicateInfo?.duplicates.some(d => normalizeText(d.english) === normalizeText(formData.english || ""))
+                    ? "border-amber-300 focus-visible:ring-amber-400"
+                    : ""
+                    }`}
                 />
               </div>
 
@@ -386,7 +455,7 @@ export default function AddVocabulary() {
                   type="button"
                   variant="secondary"
                   onClick={handleGenerate}
-                  disabled={generating || !formData.english}
+                  disabled={generating || !formData.english || (!id && (duplicateInfo?.duplicates?.length ?? 0) > 0)}
                   className="w-full md:w-auto h-12 md:h-10 text-base md:text-sm"
                 >
                   {generating ? (
@@ -674,7 +743,7 @@ export default function AddVocabulary() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || (!id && (duplicateInfo?.duplicates?.length ?? 0) > 0)}
                   className="w-full md:w-auto h-12 md:h-10 text-base md:text-sm order-1 md:order-2"
                 >
                   {loading && <Loader2 className="mr-2 h-5 w-5 md:h-4 md:w-4 animate-spin" />}

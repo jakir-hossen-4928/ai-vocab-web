@@ -1,5 +1,6 @@
 import { Vocabulary } from "@/types/vocabulary";
 import { normalizeText } from "./duplicateDetection";
+export { normalizeText };
 
 /**
  * Interface for duplicate check result
@@ -10,29 +11,20 @@ export interface DuplicateCheckResult {
     message: string;
 }
 
-/**
- * Check if a vocabulary entry already exists in the database
- * Detection logic:
- * 1. First, compare the part of speech
- * 2. Then, match the English word (normalized)
- * 3. If both match, it's a duplicate
- * 4. If only the word matches but part of speech differs, it's unique
- *
- * @param newVocab - The new vocabulary entry to check
- * @param existingVocabularies - Array of existing vocabularies from the database
- * @returns DuplicateCheckResult with isDuplicate flag and matching entries
- */
 export const checkVocabularyDuplicate = (
-    newVocab: { english: string; partOfSpeech?: string },
+    newVocab: { english?: string; bangla?: string; partOfSpeech?: string },
     existingVocabularies: Vocabulary[]
 ): DuplicateCheckResult => {
-    const normalizedNewWord = normalizeText(newVocab.english);
+    const normalizedNewEnglish = newVocab.english ? normalizeText(newVocab.english) : "";
+    const normalizedNewBangla = newVocab.bangla ? normalizeText(newVocab.bangla) : "";
     const newPartOfSpeech = newVocab.partOfSpeech?.trim().toLowerCase() || "";
 
-    // Find all vocabularies with the same English word (normalized)
-    const matchingWords = existingVocabularies.filter(vocab =>
-        normalizeText(vocab.english) === normalizedNewWord
-    );
+    // Find all vocabularies with the same English word or Bangla word (normalized)
+    const matchingWords = existingVocabularies.filter(vocab => {
+        const matchesEnglish = normalizedNewEnglish && normalizeText(vocab.english) === normalizedNewEnglish;
+        const matchesBangla = normalizedNewBangla && normalizeText(vocab.bangla) === normalizedNewBangla;
+        return matchesEnglish || matchesBangla;
+    });
 
     if (matchingWords.length === 0) {
         return {
@@ -43,24 +35,33 @@ export const checkVocabularyDuplicate = (
     }
 
     // Check if any of the matching words also have the same part of speech
-    const exactDuplicates = matchingWords.filter(vocab =>
-        vocab.partOfSpeech?.trim().toLowerCase() === newPartOfSpeech
-    );
+    const exactDuplicates = matchingWords.filter(vocab => {
+        const isSamePartOfSpeech = vocab.partOfSpeech?.trim().toLowerCase() === newPartOfSpeech;
+        const matchesEnglish = normalizedNewEnglish && normalizeText(vocab.english) === normalizedNewEnglish;
+        const matchesBangla = normalizedNewBangla && normalizeText(vocab.bangla) === normalizedNewBangla;
+
+        // Exact duplicate if same word (English or Bangla) AND same part of speech
+        return isSamePartOfSpeech && (matchesEnglish || matchesBangla);
+    });
 
     if (exactDuplicates.length > 0) {
+        const dup = exactDuplicates[0];
+        const dupType = normalizedNewEnglish && normalizeText(dup.english) === normalizedNewEnglish ? "English word" : "Bangla meaning";
         return {
             isDuplicate: true,
             duplicates: exactDuplicates,
-            message: `Duplicate found! The word "${newVocab.english}" with part of speech "${newVocab.partOfSpeech}" already exists.`
+            message: `Duplicate found! The ${dupType} "${dupType === "English word" ? dup.english : dup.bangla}" with part of speech "${dup.partOfSpeech}" already exists.`
         };
     }
 
-    // Word exists but with different part of speech - this is allowed
+    // Word exists but with different part of speech or it's a cross-match (e.g. English matches but Bangla doesn't)
     const differentPosParts = matchingWords.map(v => v.partOfSpeech).filter(Boolean).join(", ");
+    const matchingType = matchingWords.some(v => normalizeText(v.english) === normalizedNewEnglish) ? "English word" : "Bangla meaning";
+
     return {
         isDuplicate: false,
         duplicates: matchingWords,
-        message: `The word "${newVocab.english}" exists with different part(s) of speech (${differentPosParts}). Adding as a new entry with "${newVocab.partOfSpeech}".`
+        message: `The ${matchingType} already exists with different part(s) of speech (${differentPosParts}).`
     };
 };
 
