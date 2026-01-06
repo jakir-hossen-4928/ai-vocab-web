@@ -16,6 +16,7 @@ import { useResourcesSimple } from "@/hooks/useResources";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSwipe } from "@/hooks/useSwipe";
 import { metaService } from "@/services/metaService";
+import { Helmet } from "react-helmet-async";
 
 const SwipeHint = ({ onDismiss }: { onDismiss: () => void }) => (
     <motion.div
@@ -34,7 +35,8 @@ const SwipeHint = ({ onDismiss }: { onDismiss: () => void }) => (
 );
 
 export default function ResourceDetail() {
-    const { id } = useParams();
+    const { slug } = useParams();
+    const id = slug ? decodeURIComponent(slug) : undefined;
     const navigate = useNavigate();
     const [grammar, setGrammar] = useState<GrammarImage | null>(null);
     const [loading, setLoading] = useState(true);
@@ -52,18 +54,20 @@ export default function ResourceDetail() {
     }, [isMobile]);
 
     const handleSwipeLeft = () => {
-        const currentIndex = resources.findIndex(r => r.id === id);
+        const currentIndex = resources.findIndex(r => r.id === id || r.slug === id);
         if (currentIndex !== -1 && currentIndex < resources.length - 1) {
             setSlideDirection('right');
-            navigate(`/resources/${resources[currentIndex + 1].id}`);
+            const nextResource = resources[currentIndex + 1];
+            navigate(`/resources/${nextResource.slug || nextResource.id}`);
         }
     };
 
     const handleSwipeRight = () => {
-        const currentIndex = resources.findIndex(r => r.id === id);
+        const currentIndex = resources.findIndex(r => r.id === id || r.slug === id);
         if (currentIndex > 0) {
             setSlideDirection('left');
-            navigate(`/resources/${resources[currentIndex - 1].id}`);
+            const prevResource = resources[currentIndex - 1];
+            navigate(`/resources/${prevResource.slug || prevResource.id}`);
         }
     };
 
@@ -79,8 +83,8 @@ export default function ResourceDetail() {
             if (!id) return;
             setLoading(true);
 
-            // Try to find in cache first
-            const cachedResource = resources.find(r => r.id === id);
+            // Try to find in cache first (by ID or Slug)
+            const cachedResource = resources.find(r => r.id === id || r.slug === id);
             if (cachedResource) {
                 setGrammar(cachedResource);
                 setLoading(false);
@@ -88,16 +92,32 @@ export default function ResourceDetail() {
             }
 
             try {
+                // First try to fetch as ID
                 const docRef = doc(db, "grammar_images", id);
                 const docSnap = await getDoc(docRef);
 
                 if (docSnap.exists()) {
                     setGrammar({ id: docSnap.id, ...docSnap.data() } as GrammarImage);
                 } else {
-                    toast.error("Resource not found");
-                    navigate("/resources");
+                    // Try to fetch by slug if ID lookup fails
+                    const { collection, query, where, getDocs, limit } = await import("firebase/firestore");
+                    const q = query(
+                        collection(db, "grammar_images"),
+                        where("slug", "==", id),
+                        limit(1)
+                    );
+                    const querySnapshot = await getDocs(q);
+
+                    if (!querySnapshot.empty) {
+                        const resDoc = querySnapshot.docs[0];
+                        setGrammar({ id: resDoc.id, ...resDoc.data() } as GrammarImage);
+                    } else {
+                        toast.error("Resource not found");
+                        navigate("/resources");
+                    }
                 }
             } catch (error) {
+                console.error("Error loading resource:", error);
                 toast.error("Failed to load resource details");
             } finally {
                 setLoading(false);
@@ -107,17 +127,7 @@ export default function ResourceDetail() {
         loadResource();
     }, [id, navigate, resources]);
 
-    // Update Meta Tags for social sharing
-    useEffect(() => {
-        if (grammar) {
-            metaService.setMeta({
-                title: `${grammar.title} | Ai Vocab Resources`,
-                description: grammar.description?.substring(0, 160).replace(/[#*`]/g, ''),
-                image: grammar.imageUrl || '/og-image.png',
-                type: 'article'
-            });
-        }
-    }, [grammar]);
+    // Meta tags are now handles by react-helmet-async in the render
 
     const handleShare = async () => {
         if (navigator.share) {
@@ -154,6 +164,17 @@ export default function ResourceDetail() {
 
     return (
         <div className="min-h-screen bg-background pb-20 overflow-x-hidden" {...containerProps}>
+            {grammar && (
+                <Helmet>
+                    <title>{grammar.title} | Ai Vocab Resources</title>
+                    <meta name="description" content={grammar.description?.substring(0, 160).replace(/[#*`]/g, '') || 'Educational resource'} />
+                    <meta property="og:title" content={grammar.title} />
+                    <meta property="og:description" content={grammar.description?.substring(0, 160).replace(/[#*`]/g, '') || 'Educational resource'} />
+                    <meta property="og:image" content={grammar.imageUrl || '/og_image.png'} />
+                    <meta property="og:type" content="article" />
+                    <meta name="twitter:card" content="summary_large_image" />
+                </Helmet>
+            )}
             {/* Navigation Bar */}
             <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b px-4 py-3">
                 <div className="max-w-4xl mx-auto flex items-center justify-between">
@@ -216,7 +237,7 @@ export default function ResourceDetail() {
                             >
                                 <div className="relative aspect-video rounded-3xl overflow-hidden shadow-2xl border bg-muted">
                                     <img
-                                        src={grammar.imageUrl}
+                                        src={grammar.thumbnailUrl || grammar.imageUrl}
                                         alt={grammar.title}
                                         className="w-full h-full object-cover"
                                         width={1200}

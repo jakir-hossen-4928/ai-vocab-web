@@ -10,6 +10,8 @@ const ROUTE_TITLES: Record<string, string> = {
     '/': 'Welcome',
     '/auth': 'Sign In',
     '/download': 'Download App',
+    '/meet-developer': 'Meet Developer',
+    '/print-vocabularies': 'Print Vocabularies',
     '/home': 'Home',
     '/profile': 'My Profile',
     '/vocabularies': 'Vocabularies',
@@ -23,9 +25,12 @@ const ROUTE_TITLES: Record<string, string> = {
     '/favorites': 'My Favorites',
     '/admin/analytics': 'Analytics',
     '/admin/users': 'User Management',
-    '/admin/tools': 'Admin Tools',
+    '/admin/ai-enhancement-studio': 'AI Enhancement Studio',
     '/admin/duplicates': 'Duplicate Manager',
     '/admin/resources': 'Admin Resources',
+    '/admin/resources/add': 'Add Resource',
+    '/ielts-listing': 'IELTS',
+    '/admin/ielts-listening-builder': 'IELTS Builder',
 };
 
 export const usePageTitle = () => {
@@ -68,6 +73,12 @@ export const usePageTitle = () => {
                 const vocabEditMatch = matchPath('/vocabularies/edit/:id', path);
                 if (vocabEditMatch) {
                     title = 'Edit Vocabulary';
+                }
+
+                // Resource Edit
+                const resourceEditMatch = matchPath('/admin/resources/edit/:id', path);
+                if (resourceEditMatch) {
+                    title = 'Edit Resource';
                 }
 
                 // Resource Detail

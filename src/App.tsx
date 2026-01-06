@@ -27,13 +27,13 @@ const VocabularyDetail = lazy(() => import("./pages/VocabularyDetail"));
 const ResourceDetail = lazy(() => import("./pages/ResourceDetail"));
 const ResourcesGallery = lazy(() => import("./pages/ResourcesGallery"));
 const AdminUsers = lazy(() => import("./admin/AdminUsers"));
-const Tools = lazy(() => import("./admin/AdminTools")); // Assuming this was AdminTools
-const AdminTools = lazy(() => import("./admin/AdminTools"));
+const AiEnhancementStudio = lazy(() => import("./admin/AiEnhancementStudio"));
 const Favorites = lazy(() => import("./pages/Favorites"));
 const DuplicateManager = lazy(() => import("./admin/DuplicateManager"));
 const AdminDashboard = lazy(() => import("./admin/AdminDashboard"));
 
-const AdminResourceGallery = lazy(() => import("./admin/ResourceGallery"));
+const AdminResourceGallery = lazy(() => import("./admin/AdminResourceGallery"));
+const AdminAddResource = lazy(() => import("./admin/AdminAddResource"));
 const PrintVocabulary = lazy(() => import("./pages/PrintVocabulary"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const OnlineDictionary = lazy(() => import("./pages/OnlineDictionary"));
@@ -78,34 +78,41 @@ const AppRoutes = () => {
           {/* Home dashboard with navigation bars */}
           <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          {/* Publicly accessible pages but within Layout */}
+          <Route path="/resources" element={<ResourcesGallery />} />
+          <Route path="/resources/:slug" element={<ResourceDetail />} />
+
+          {/* Protected Routes */}
+          <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/vocabularies" element={<ProtectedRoute><Vocabularies /></ProtectedRoute>} />
+          <Route path="/vocabularies/:id" element={<ProtectedRoute><VocabularyDetail /></ProtectedRoute>} />
           <Route path="/vocabularies/add" element={<AdminRoute><AddVocabulary /></AdminRoute>} />
           <Route path="/vocabularies/bulk-add" element={<AdminRoute><BulkAddVocabulary /></AdminRoute>} />
           <Route path="/vocabularies/edit/:id" element={<AdminRoute><AddVocabulary /></AdminRoute>} />
-          <Route path="/vocabularies/:id" element={<ProtectedRoute><VocabularyDetail /></ProtectedRoute>} />
-          <Route path="/resources" element={<ProtectedRoute><ResourcesGallery /></ProtectedRoute>} />
-          <Route path="/resources/:id" element={<ProtectedRoute><ResourceDetail /></ProtectedRoute>} />
           <Route path="/dictionary" element={<ProtectedRoute><OnlineDictionary /></ProtectedRoute>} />
           <Route path="/flashcards" element={<ProtectedRoute><Flashcards /></ProtectedRoute>} />
-          <Route path="/surprise" element={<ProtectedRoute><MeetDeveloper /></ProtectedRoute>} />
+          <Route path="/meet-developer" element={<ProtectedRoute><MeetDeveloper /></ProtectedRoute>} />
 
-          {/* Listening Routes */}
+          {/* Listening Routes (Protected) */}
           <Route path="/ielts-listing" element={<ProtectedRoute><ListeningList /></ProtectedRoute>} />
           <Route path="/ielts-listing/:id" element={<ProtectedRoute><ListeningDetail /></ProtectedRoute>} />
 
           {/* Redirects from old grammar routes to new resources routes */}
           <Route path="/grammar" element={<Navigate to="/resources" replace />} />
-          <Route path="/grammar/:id" element={<Navigate to="/resources/:id" replace />} />
+          <Route path="/grammar/:slug" element={<Navigate to="/resources/:slug" replace />} />
 
           {/* Redirect old admin routes to resources gallery */}
           <Route path="/admin/resources" element={<AdminRoute><AdminResourceGallery /></AdminRoute>} />
+          <Route path="/admin/resources/add" element={<AdminRoute><AdminAddResource /></AdminRoute>} />
+          <Route path="/admin/resources/edit/:id" element={<AdminRoute><AdminAddResource /></AdminRoute>} />
           <Route path="/admin/grammar" element={<Navigate to="/admin/resources" replace />} />
           <Route path="/admin" element={<Navigate to="/admin/analytics" replace />} />
           <Route path="/admin/dashboard" element={<Navigate to="/admin/analytics" replace />} />
           <Route path="/admin/analytics" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
           <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
-          <Route path="/admin/tools" element={<AdminRoute><AdminTools /></AdminRoute>} />
-          <Route path="/print" element={<ProtectedRoute><PrintVocabulary /></ProtectedRoute>} />
+          <Route path="/admin/ai-enhancement-studio" element={<AdminRoute><AiEnhancementStudio /></AdminRoute>} />
+          <Route path="/print-vocabularies" element={<ProtectedRoute><PrintVocabulary /></ProtectedRoute>} />
           <Route path="/admin/duplicates" element={<AdminRoute><DuplicateManager /></AdminRoute>} />
 
           <Route path="/admin/ielts-listening-builder" element={<AdminRoute><ListeningBuilder /></AdminRoute>} />

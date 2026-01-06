@@ -15,16 +15,18 @@ service cloud.firestore {
 
     // User Roles collection
     match /user_roles/{userId} {
-      allow read: if isAuthenticated();
+      // Tightened: Users can only read their own role, admins can read all
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      
       // Allow users to create their own document on first login
       allow create: if isAuthenticated() && request.auth.uid == userId;
+      
       // Allow users to update their own profile info (but not role)
       allow update: if isAuthenticated() && request.auth.uid == userId &&
                        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
+      
       // Allow admins to update any user (including role changes)
-      allow update: if isAdmin();
-      // Only admins can delete users
-      allow delete: if isAdmin();
+      allow update, delete: if isAdmin();
     }
 
     // Vocabularies collection
@@ -33,21 +35,20 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
-    // IELTS Listings collection
+    // IELTS Listings collection - Protected Read (Authenticated Users Only)
     match /ielts-listings/{testId} {
       allow read: if isAuthenticated();
       allow create, update, delete: if isAdmin();
     }
 
-    // Grammar Images collection
+    // Grammar Images (Resources) collection - Public Read
     match /grammar_images/{imageId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow create, update, delete: if isAdmin();
     }
 
-    // User activities and progress
+    // User activities and progress - User Only
     match /users/{userId} {
-      // Allow users to read and write their own data
       match /activities/{activityId} {
         allow read, write: if isAuthenticated() && request.auth.uid == userId;
       }

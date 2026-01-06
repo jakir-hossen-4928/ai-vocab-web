@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useVocabularies, useVocabularyMutations } from "@/hooks/useVocabularies";
 import { Vocabulary } from "@/types/vocabulary";
+import { useResourcesSimple } from "@/hooks/useResources";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -50,7 +51,7 @@ interface EnhancementResult {
 
 type FilterType = "all" | "missing-verb" | "missing-synonyms" | "missing-antonyms" | "missing-examples" | "missing-related" | "missing-pronunciation" | "missing-explanation";
 
-export default function AdminTools() {
+export default function AiEnhancementStudio() {
     const navigate = useNavigate();
     const { user, isAdmin } = useAuth();
     const { data: vocabularies = [], isLoading } = useVocabularies();
@@ -67,6 +68,9 @@ export default function AdminTools() {
     const [showPreview, setShowPreview] = useState(false);
     const [previewVocab, setPreviewVocab] = useState<Vocabulary | null>(null);
     const [enhancedData, setEnhancedData] = useState<Partial<Vocabulary> | null>(null);
+
+    // Resource data for stats
+    const { data: resources = [], isLoading: isLoadingResources } = useResourcesSimple();
 
     const hasMissingFields = useCallback((vocab: Vocabulary) => {
         const missing = [];
@@ -283,6 +287,7 @@ export default function AdminTools() {
                                 </div>
                             </CardContent>
                         </Card>
+
 
                         {/* 2. Enhancement Config */}
                         <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-primary/5 ring-1 ring-primary/10">

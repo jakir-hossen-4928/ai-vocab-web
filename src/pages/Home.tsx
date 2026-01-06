@@ -20,7 +20,7 @@ import { safeTimestamp } from "@/utils/dateUtils";
 import { vocabularyService } from "@/services/vocabularyService";
 import { History } from "lucide-react";
 import { metaService } from "@/services/metaService";
-import { aiPrompts } from "@/services/aiPromptService";
+import { Helmet } from "react-helmet-async";
 
 export default function Home() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -135,6 +135,14 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>Ai Vocab | Master English Vocabulary</title>
+        <meta name="description" content="Enhance your English vocabulary with AI-powered tools, personalized learning, and interactive resources." />
+        <meta property="og:title" content="Ai Vocab | Master English Vocabulary" />
+        <meta property="og:description" content="Personalized AI vocabulary builder and English learning platform." />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+      </Helmet>
       {/* Hero Section */}
       <motion.section
         initial={{ opacity: 0 }}

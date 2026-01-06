@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useResourcesSimple } from "@/hooks/useResources";
 import { useDebounce } from "@/hooks/useDebounce";
+import { GrammarImage } from "@/types/grammar";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,8 @@ import {
   SortAsc,
   SortDesc,
   Calendar,
-  X
+  X,
+  ArrowRight
 } from "lucide-react";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { motion } from "framer-motion";
@@ -38,6 +40,7 @@ import {
 
 import { List, AutoSizer, WindowScroller, CellMeasurer, CellMeasurerCache } from "react-virtualized";
 import { cleanTextContent, stripMarkdown } from "@/utils/textCleaner";
+import { Helmet } from "react-helmet-async";
 
 export default function ResourcesGallery() {
   const navigate = useNavigate();
@@ -158,6 +161,12 @@ export default function ResourcesGallery() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
+      <Helmet>
+        <title>Educational Resources | Ai Vocab</title>
+        <meta name="description" content="Browse our collection of English learning materials, grammar guides, and vocabulary resources." />
+        <meta property="og:title" content="Educational Resources | Ai Vocab" />
+        <meta property="og:description" content="High-quality English learning materials and resources." />
+      </Helmet>
       <motion.header
         initial={{ opacity: 0, y: -50 }}
         animate={{ opacity: 1, y: 0 }}
@@ -395,48 +404,60 @@ export default function ResourcesGallery() {
                                       gridTemplateColumns: `repeat(${itemsPerRow}, minmax(0, 1fr))`
                                     }}
                                   >
-                                    {rowItems.map((img) => (
+                                    {rowItems.map((img: GrammarImage) => (
                                       <motion.div
                                         key={img.id}
-                                        onClick={() => navigate(`/resources/${img.id}`)}
+                                        onClick={() => navigate(`/resources/${img.slug || img.id}`)}
                                       >
-                                        <Card className="overflow-hidden h-full flex flex-col hover:shadow-lg transition-shadow cursor-pointer group border-0 bg-card/50 backdrop-blur-sm relative">
-                                          <div className="relative aspect-video overflow-hidden bg-muted/30 flex items-center justify-center">
+                                        <Card className="p-6 h-full flex flex-col hover:shadow-lg transition-all duration-300 cursor-pointer group border border-gray-200 bg-white shadow-sm relative rounded-xl">
+                                          <div className="relative aspect-video overflow-hidden rounded-lg">
                                             {img.imageUrl ? (
-                                              <>
+                                              <div className="w-full h-full relative flex items-center justify-center bg-muted">
+                                                <img
+                                                  src={img.thumbnailUrl || img.imageUrl}
+                                                  alt=""
+                                                  className="absolute inset-0 w-full h-full object-cover blur-md opacity-50 scale-110"
+                                                  loading="lazy"
+                                                  width={1920}
+                                                  height={1080}
+                                                />
                                                 <img
                                                   src={img.thumbnailUrl || img.imageUrl}
                                                   alt={img.title}
-                                                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                                  className="relative z-10 max-w-full max-h-full object-contain transition-transform duration-700 group-hover:scale-105"
                                                   loading="lazy"
-                                                  width={400}
-                                                  height={225}
+                                                  width={1920}
+                                                  height={1080}
                                                 />
-                                                <div className="absolute inset-0 bg-black/5 group-hover:bg-black/0 transition-colors" />
-                                              </>
+                                              </div>
                                             ) : (
-                                              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-blue-500/20 group-hover:scale-105 transition-transform duration-500">
-                                                <GraduationCap className="h-12 w-12 text-primary/40" />
+                                              <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-primary/20 to-blue-500/20 group-hover:scale-105 transition-transform duration-500">
+                                                <GraduationCap className="h-12 w-12 text-primary/40 mb-2" />
+                                                <span className="text-[10px] font-bold text-primary/30 uppercase tracking-widest">
+                                                  1920x1080
+                                                </span>
                                               </div>
                                             )}
                                           </div>
 
-                                          <div className="p-5 flex-1 flex flex-col">
-                                            <h3 className="text-xl font-bold mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+                                          <div className="flex-1 flex flex-col">
+                                            <h3 className="mt-6 mb-2 text-2xl font-semibold tracking-tight text-foreground group-hover:text-primary transition-colors line-clamp-2">
                                               {img.title}
                                             </h3>
-                                            <div className="text-muted-foreground text-sm line-clamp-3 mb-4 flex-1">
+                                            <p className="mb-6 text-muted-foreground text-sm line-clamp-3 leading-relaxed">
                                               {(() => {
                                                 if (!img.description) return "Explore this resource in detail...";
                                                 const cleanText = stripMarkdown(img.description);
                                                 return cleanText.length > 100 ? cleanText.slice(0, 100) + '...' : cleanText;
                                               })()}
-                                            </div>
-                                            <div className="flex items-center justify-between mt-auto pt-2 border-t">
-                                              <div className="text-primary text-sm font-medium flex items-center">
-                                                Read Article <ZoomIn className="ml-2 h-4 w-4" />
+                                            </p>
+
+                                            <div className="mt-auto flex items-center justify-between">
+                                              <div className="inline-flex items-center text-muted-foreground bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:text-foreground focus:ring-4 focus:ring-gray-200 shadow-xs font-medium leading-5 rounded-lg text-sm px-4 py-2.5 focus:outline-none transition-all group-hover:border-primary/30 group-hover:bg-primary/5 group-hover:text-primary">
+                                                Read more
+                                                <ArrowRight className="w-4 h-4 ms-1.5 transition-transform group-hover:translate-x-1" />
                                               </div>
-                                              <span className="text-xs text-muted-foreground">
+                                              <span className="text-[11px] font-medium text-muted-foreground/50">
                                                 {new Date(img.createdAt).toLocaleDateString()}
                                               </span>
                                             </div>

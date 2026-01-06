@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
+import Prerender from "vite-plugin-prerender";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -18,6 +19,14 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
+    Prerender({
+      staticDir: path.join(__dirname, 'dist'),
+      routes: ['/', '/resources'],
+      renderer: new Prerender.PuppeteerRenderer({
+        renderAfterDocumentEvent: 'render-event',
+        headless: true,
+      }),
+    }),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],

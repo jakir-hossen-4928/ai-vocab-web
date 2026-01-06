@@ -11,11 +11,14 @@ const queryClient = new QueryClient({
         },
     },
 });
+import { HelmetProvider } from "react-helmet-async";
 
 createRoot(document.getElementById("root")!).render(
-    <QueryClientProvider client={queryClient}>
-        <App />
-    </QueryClientProvider>
+    <HelmetProvider>
+        <QueryClientProvider client={queryClient}>
+            <App />
+        </QueryClientProvider>
+    </HelmetProvider>
 );
 
 // Disable source code viewing in production

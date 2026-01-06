@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Home, BookOpen, GraduationCap, User, Activity, Globe, LogOut, Users, Shield, Layers, Upload, Heart, Plus, Wand2, LayoutDashboard, Settings, Search, Download, Gift, Printer } from "lucide-react";
+import { Home, BookOpen, GraduationCap, User, Activity, Globe, LogOut, Users, Shield, Layers, Upload, Heart, Plus, Wand2, LayoutDashboard, Settings, Search, Download, Gift, Printer, Headphones } from "lucide-react";
 import { NavLink } from "@/navigation/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { signOut } from "firebase/auth";
@@ -21,8 +21,7 @@ const mainNavItems = [
     { path: "/flashcards", icon: Layers, label: "Flashcards" },
     { path: "/favorites", icon: Heart, label: "Favorites" },
     { path: "/resources", icon: GraduationCap, label: "Resources" },
-    { path: "/print", icon: Printer, label: "Print Vocabulary" },
-    { path: "/surprise", icon: Gift, label: "Special Gift 🎁❤️" },
+    { path: "/ielts-listing", icon: Headphones, label: "Listening" },
     { path: "/profile", icon: User, label: "Profile" },
     { path: "/download", icon: Download, label: "Download App" },
 ];
@@ -31,10 +30,12 @@ const adminNavItems = [
     { path: "/admin/analytics", icon: LayoutDashboard, label: "Analytics" },
     { path: "/vocabularies/add", icon: Plus, label: "Add Vocabulary" },
     { path: "/admin/users", icon: Users, label: "Manage Users" },
-    { path: "/admin/tools", icon: Wand2, label: "AI Enhancement" },
+    { path: "/admin/ai-enhancement-studio", icon: Wand2, label: "AI Enhancement Studio" },
     { path: "/admin/resources", icon: GraduationCap, label: "Resources Manager" },
+    { path: "/admin/resources/add", icon: Plus, label: "Add Resource" },
     { path: "/admin/duplicates", icon: Shield, label: "Duplicate Manager" },
     { path: "/vocabularies/bulk-add", icon: Upload, label: "Bulk Upload" },
+    { path: "/admin/ielts-listening-builder", icon: Headphones, label: "IELTS Builder" },
 ];
 
 interface MobileDrawerProps {

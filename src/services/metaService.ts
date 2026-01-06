@@ -28,8 +28,13 @@ export const metaService = {
         }
 
         if (image) {
-            this.setTag('property', 'og:image', image);
-            this.setTag('name', 'twitter:image', image);
+            // Ensure image URL is absolute for social bots
+            const absoluteImage = image.startsWith('http') 
+                ? image 
+                : `${window.location.origin}${image.startsWith('/') ? '' : '/'}${image}`;
+            
+            this.setTag('property', 'og:image', absoluteImage);
+            this.setTag('name', 'twitter:image', absoluteImage);
         }
 
         if (url) {
@@ -55,7 +60,7 @@ export const metaService = {
         this.setMeta({
             title: 'Ai Vocab',
             description: 'Master English vocabulary with AI-powered coaching',
-            image: '/og-image.png'
+            image: '/og_image.png'
         });
     }
 };
