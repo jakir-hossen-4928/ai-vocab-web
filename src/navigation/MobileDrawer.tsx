@@ -21,7 +21,6 @@ const mainNavItems = [
     { path: "/flashcards", icon: Layers, label: "Flashcards" },
     { path: "/favorites", icon: Heart, label: "Favorites" },
     { path: "/resources", icon: GraduationCap, label: "Resources" },
-    { path: "/ielts-listing", icon: Headphones, label: "Listening" },
     { path: "/profile", icon: User, label: "Profile" },
     { path: "/download", icon: Download, label: "Download App" },
 ];
@@ -35,7 +34,6 @@ const adminNavItems = [
     { path: "/admin/resources/add", icon: Plus, label: "Add Resource" },
     { path: "/admin/duplicates", icon: Shield, label: "Duplicate Manager" },
     { path: "/vocabularies/bulk-add", icon: Upload, label: "Bulk Upload" },
-    { path: "/admin/ielts-listening-builder", icon: Headphones, label: "IELTS Builder" },
 ];
 
 interface MobileDrawerProps {

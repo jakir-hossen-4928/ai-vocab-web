@@ -41,6 +41,8 @@ import {
 import { List, AutoSizer, WindowScroller, CellMeasurer, CellMeasurerCache } from "react-virtualized";
 import { cleanTextContent, stripMarkdown } from "@/utils/textCleaner";
 import { Helmet } from "react-helmet-async";
+import { CachedImage } from "@/components/CachedImage";
+import { ResourcePlaceholder } from "@/components/ResourcePlaceholder";
 
 export default function ResourcesGallery() {
   const navigate = useNavigate();
@@ -409,42 +411,33 @@ export default function ResourcesGallery() {
                                         key={img.id}
                                         onClick={() => navigate(`/resources/${img.slug || img.id}`)}
                                       >
-                                        <Card className="p-6 h-full flex flex-col hover:shadow-lg transition-all duration-300 cursor-pointer group border border-gray-200 bg-white shadow-sm relative rounded-xl">
-                                          <div className="relative aspect-video overflow-hidden rounded-lg">
+                                        <Card className="min-h-full flex flex-col hover:shadow-xl transition-all duration-300 cursor-pointer group border border-gray-200 bg-white shadow-md relative rounded-2xl overflow-hidden">
+                                          <div className="relative aspect-video w-full overflow-hidden bg-muted">
                                             {img.imageUrl ? (
-                                              <div className="w-full h-full relative flex items-center justify-center bg-muted">
-                                                <img
+                                              <div className="w-full h-full relative">
+                                                <CachedImage
                                                   src={img.thumbnailUrl || img.imageUrl}
                                                   alt=""
-                                                  className="absolute inset-0 w-full h-full object-cover blur-md opacity-50 scale-110"
+                                                  className="absolute inset-0 w-full h-full object-cover blur-xl opacity-40 scale-110"
                                                   loading="lazy"
-                                                  width={1920}
-                                                  height={1080}
                                                 />
-                                                <img
-                                                  src={img.thumbnailUrl || img.imageUrl}
+                                                <CachedImage
+                                                  src={img.imageUrl}
                                                   alt={img.title}
-                                                  className="relative z-10 max-w-full max-h-full object-contain transition-transform duration-700 group-hover:scale-105"
+                                                  className="relative z-10 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                                                   loading="lazy"
-                                                  width={1920}
-                                                  height={1080}
                                                 />
                                               </div>
                                             ) : (
-                                              <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-primary/20 to-blue-500/20 group-hover:scale-105 transition-transform duration-500">
-                                                <GraduationCap className="h-12 w-12 text-primary/40 mb-2" />
-                                                <span className="text-[10px] font-bold text-primary/30 uppercase tracking-widest">
-                                                  1920x1080
-                                                </span>
-                                              </div>
+                                              <ResourcePlaceholder title={img.title} />
                                             )}
                                           </div>
 
-                                          <div className="flex-1 flex flex-col">
-                                            <h3 className="mt-6 mb-2 text-2xl font-semibold tracking-tight text-foreground group-hover:text-primary transition-colors line-clamp-2">
+                                          <div className="flex-1 p-5 sm:p-6 flex flex-col">
+                                            <h3 className="mb-2 text-xl sm:text-2xl font-bold tracking-tight text-foreground group-hover:text-primary transition-colors line-clamp-2">
                                               {img.title}
                                             </h3>
-                                            <p className="mb-6 text-muted-foreground text-sm line-clamp-3 leading-relaxed">
+                                            <p className="mb-6 text-muted-foreground text-sm line-clamp-3 leading-relaxed flex-1">
                                               {(() => {
                                                 if (!img.description) return "Explore this resource in detail...";
                                                 const cleanText = stripMarkdown(img.description);
@@ -453,7 +446,7 @@ export default function ResourcesGallery() {
                                             </p>
 
                                             <div className="mt-auto flex items-center justify-between">
-                                              <div className="inline-flex items-center text-muted-foreground bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:text-foreground focus:ring-4 focus:ring-gray-200 shadow-xs font-medium leading-5 rounded-lg text-sm px-4 py-2.5 focus:outline-none transition-all group-hover:border-primary/30 group-hover:bg-primary/5 group-hover:text-primary">
+                                              <div className="inline-flex items-center text-muted-foreground bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:text-foreground shadow-sm font-medium leading-5 rounded-lg text-sm px-4 py-2.5 transition-all group-hover:border-primary/30 group-hover:bg-primary/5 group-hover:text-primary">
                                                 Read more
                                                 <ArrowRight className="w-4 h-4 ms-1.5 transition-transform group-hover:translate-x-1" />
                                               </div>

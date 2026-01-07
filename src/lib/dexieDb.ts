@@ -60,6 +60,13 @@ export interface ApiCache {
     timestamp: number;
 }
 
+// Image Cache for offline support
+export interface ImageCache {
+    url: string;
+    blob: Blob;
+    timestamp: number;
+}
+
 // Main Dexie Database
 export class VocabularyDatabase extends Dexie {
     // Tables
@@ -72,11 +79,12 @@ export class VocabularyDatabase extends Dexie {
     searchHistory!: Table<SearchHistory, number>;
     apiCache!: Table<ApiCache, string>;
     listeningTests!: Table<ListeningTest, string>;
+    imageCache!: Table<ImageCache, string>;
 
     constructor() {
         super('VocabularyAppDB');
 
-        this.version(4).stores({
+        this.version(6).stores({
             vocabularies: 'id, english, bangla, partOfSpeech, createdAt, updatedAt, userId',
             resources: 'id, title, createdAt, userId',
             chatSessions: 'id, vocabularyId, updatedAt',
@@ -85,15 +93,8 @@ export class VocabularyDatabase extends Dexie {
             syncMetadata: 'key, lastSyncedAt',
             searchHistory: '++id, query, timestamp',
             apiCache: 'id, timestamp',
-            apiCache: 'id, timestamp',
-            // ieltsTests: 'id, title' // Deprecated in v5
-        });
-
-        this.version(5).stores({
             listeningTests: 'id, title',
-            ieltsTests: null // Delete old table
-        }).upgrade(async tx => {
-            // Optional: Migrate data if needed. For now, we start fresh or relying on sync.
+            imageCache: 'url, timestamp'
         });
     }
 }
@@ -724,6 +725,38 @@ export const dexieService = {
             await db.listeningTests.clear();
         } catch (error) {
             console.error('Failed to clear listening tests from Dexie:', error);
+        }
+    },
+
+    // ==================== IMAGE CACHE ====================
+    async getImageFromCache(url: string): Promise<Blob | undefined> {
+        try {
+            const entry = await db.imageCache.get(url);
+            if (!entry) return undefined;
+
+            // Optional: Expiration check (e.g., 30 days for images)
+            const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+            if (Date.now() - entry.timestamp > thirtyDays) {
+                await db.imageCache.delete(url);
+                return undefined;
+            }
+
+            return entry.blob;
+        } catch (error) {
+            console.error('Failed to get image from Dexie cache:', error);
+            return undefined;
+        }
+    },
+
+    async saveImageToCache(url: string, blob: Blob): Promise<void> {
+        try {
+            await db.imageCache.put({
+                url,
+                blob,
+                timestamp: Date.now()
+            });
+        } catch (error) {
+            console.error('Failed to cache image in Dexie:', error);
         }
     }
 };

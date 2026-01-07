@@ -17,6 +17,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useSwipe } from "@/hooks/useSwipe";
 import { metaService } from "@/services/metaService";
 import { Helmet } from "react-helmet-async";
+import { CachedImage } from "@/components/CachedImage";
 
 const SwipeHint = ({ onDismiss }: { onDismiss: () => void }) => (
     <motion.div
@@ -235,13 +236,19 @@ export default function ResourceDetail() {
                                 transition={{ delay: 0.2 }}
                                 className="mb-10 md:mb-16 -mx-4 md:mx-0"
                             >
-                                <div className="relative aspect-video rounded-3xl overflow-hidden shadow-2xl border bg-muted">
-                                    <img
+                                <div className="relative aspect-video rounded-3xl overflow-hidden shadow-2xl border bg-muted flex items-center justify-center">
+                                    <CachedImage
                                         src={grammar.thumbnailUrl || grammar.imageUrl}
+                                        alt=""
+                                        className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-40 scale-110"
+                                        loading="lazy"
+                                    />
+                                    <CachedImage
+                                        src={grammar.imageUrl}
                                         alt={grammar.title}
-                                        className="w-full h-full object-cover"
-                                        width={1200}
-                                        height={675}
+                                        className="relative z-10 w-full h-full object-cover"
+                                        width={1920}
+                                        height={1080}
                                     />
                                 </div>
                             </motion.div>
@@ -282,7 +289,7 @@ export default function ResourceDetail() {
                                         rehypePlugins={[rehypeRaw]}
                                         components={{
                                             img: (props) => (
-                                                <img {...props} loading="lazy" decoding="async" className="rounded-2xl shadow-lg my-10 border mx-auto" />
+                                                <CachedImage src={props.src || ""} alt={props.alt || ""} className="rounded-2xl shadow-lg my-10 border mx-auto" />
                                             ),
                                             h1: ({ node, ...props }) => <h1 className="text-3xl font-bold mb-6 mt-10" {...props} />,
                                             h2: ({ node, ...props }) => <h2 className="text-2xl font-bold mb-4 mt-8" {...props} />,
