@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
+import remarkGfm from "remark-gfm";
 import parse from "html-react-parser";
 import { useResourcesSimple } from "@/hooks/useResources";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -287,20 +288,69 @@ export default function ResourceDetail() {
                                         }
                                     }) : <ReactMarkdown
                                         rehypePlugins={[rehypeRaw]}
+                                        remarkPlugins={[remarkGfm]}
                                         components={{
                                             img: (props) => (
-                                                <CachedImage src={props.src || ""} alt={props.alt || ""} className="rounded-2xl shadow-lg my-10 border mx-auto" />
+                                                <CachedImage src={props.src || ""} alt={props.alt || ""} className="rounded-2xl shadow-lg my-10 border mx-auto max-h-[500px] object-contain bg-muted/30" />
                                             ),
-                                            h1: ({ node, ...props }) => <h1 className="text-3xl font-bold mb-6 mt-10" {...props} />,
-                                            h2: ({ node, ...props }) => <h2 className="text-2xl font-bold mb-4 mt-8" {...props} />,
-                                            h3: ({ node, ...props }) => <h3 className="text-xl font-bold mb-3 mt-6" {...props} />,
-                                            p: ({ node, ...props }) => <p className="leading-relaxed mb-5" {...props} />,
-                                            ul: ({ node, ...props }) => <ul className="list-disc pl-6 mb-6 space-y-2" {...props} />,
-                                            ol: ({ node, ...props }) => <ol className="list-decimal pl-6 mb-6 space-y-2" {...props} />,
-                                            li: ({ node, ...props }) => <li className="text-muted-foreground/90" {...props} />,
+                                            h1: ({ node, ...props }) => <h1 className="text-3xl md:text-4xl font-extrabold mb-8 mt-12 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/80 pb-2" {...props} />,
+                                            h2: ({ node, ...props }) => <h2 className="text-2xl md:text-3xl font-bold mb-6 mt-10 text-foreground flex items-center gap-2" {...props} />,
+                                            h3: ({ node, ...props }) => <h3 className="text-xl md:text-2xl font-semibold mb-4 mt-8 text-foreground/90 border-l-4 border-primary/20 pl-4" {...props} />,
+                                            p: ({ node, ...props }) => <p className="leading-relaxed mb-6 text-lg text-muted-foreground/90" {...props} />,
+                                            ul: ({ node, ...props }) => <ul className="list-none pl-0 mb-8 space-y-3" {...props} />,
+                                            ol: ({ node, ...props }) => <ol className="list-decimal pl-6 mb-8 space-y-3 marker:text-primary marker:font-bold" {...props} />,
+                                            li: ({ node, children, ...props }) => (
+                                                <li className="flex items-start gap-3 text-muted-foreground/90 leading-relaxed" {...props}>
+                                                    <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />
+                                                    <span>{children}</span>
+                                                </li>
+                                            ),
                                             blockquote: ({ node, ...props }) => (
-                                                <blockquote className="border-l-4 border-l-primary bg-primary/5 py-4 px-6 rounded-r-xl italic my-8" {...props} />
-                                            )
+                                                <blockquote className="border-l-4 border-primary bg-primary/5 py-6 px-8 rounded-r-xl italic my-10 text-lg relative quote-icon" {...props} />
+                                            ),
+                                            hr: ({ node, ...props }) => (
+                                                <hr className="my-10 border-none h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" {...props} />
+                                            ),
+                                            strong: ({ node, ...props }) => (
+                                                <span className="font-bold text-foreground bg-primary/5 px-1 py-0.5 rounded" {...props} />
+                                            ),
+                                            em: ({ node, ...props }) => (
+                                                <span className="italic text-primary font-medium" {...props} />
+                                            ),
+                                            table: ({ node, ...props }) => (
+                                                <div className="overflow-x-auto my-8 rounded-xl border shadow-sm">
+                                                    <table className="w-full text-left border-collapse" {...props} />
+                                                </div>
+                                            ),
+                                            thead: ({ node, ...props }) => (
+                                                <thead className="bg-muted/50 text-foreground" {...props} />
+                                            ),
+                                            tbody: ({ node, ...props }) => (
+                                                <tbody className="divide-y" {...props} />
+                                            ),
+                                            tr: ({ node, ...props }) => (
+                                                <tr className="hover:bg-muted/30 transition-colors" {...props} />
+                                            ),
+                                            th: ({ node, ...props }) => (
+                                                <th className="px-6 py-4 font-semibold text-sm uppercase tracking-wider" {...props} />
+                                            ),
+                                            td: ({ node, ...props }) => (
+                                                <td className="px-6 py-4 text-sm" {...props} />
+                                            ),
+                                            code: ({ node, className, children, ...props }: any) => {
+                                                const match = /language-(\w+)/.exec(className || '')
+                                                return !match ? (
+                                                    <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono text-primary font-medium" {...props}>
+                                                        {children}
+                                                    </code>
+                                                ) : (
+                                                    <pre className="bg-muted p-4 rounded-xl overflow-x-auto my-6 border shadow-inner">
+                                                        <code className={className} {...props}>
+                                                            {children}
+                                                        </code>
+                                                    </pre>
+                                                )
+                                            }
                                         }}
                                     >{grammar.description}</ReactMarkdown>}
                                 </div>

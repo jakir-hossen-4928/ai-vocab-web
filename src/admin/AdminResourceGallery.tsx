@@ -33,14 +33,8 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
+import { CachedImage } from "@/components/CachedImage";
+import { ResourcePlaceholder } from "@/components/ResourcePlaceholder";
 import { cleanTextContent } from "@/utils/textCleaner";
 import RichTextEditor from "@/components/RichTextEditor";
 
@@ -112,96 +106,33 @@ export default function AdminResourceGallery() {
                     </div>
                 ) : (
                     <>
-                        {/* Desktop View: Table */}
-                        <div className="hidden lg:block rounded-md border overflow-x-auto">
-                            <Table className="min-w-[800px]">
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="w-[120px]">Image</TableHead>
-                                        <TableHead className="min-w-[200px]">Title</TableHead>
-                                        <TableHead className="w-[150px]">Created</TableHead>
-                                        <TableHead className="w-[100px] text-right">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredImages.map((img: GrammarImage) => (
-                                        <TableRow key={img.id}>
-                                            <TableCell>
-                                                <div className="aspect-video w-24 overflow-hidden rounded-md bg-muted flex items-center justify-center border relative">
-                                                    {img.imageUrl ? (
-                                                        <>
-                                                            <img src={img.thumbnailUrl || img.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover blur-sm opacity-30" />
-                                                            <img src={img.thumbnailUrl || img.imageUrl} alt={img.title} className="relative z-10 h-full w-full object-contain" />
-                                                        </>
-                                                    ) : (
-                                                        <div className="flex flex-col items-center justify-center">
-                                                            <ImageIcon className="h-4 w-4 text-muted-foreground/30" />
-                                                            <span className="text-[5px] font-bold text-muted-foreground/20 mt-0.5 tracking-tighter">1920x1080</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="font-medium">
-                                                <div className="line-clamp-2" title={img.title}>{img.title}</div>
-                                            </TableCell>
-                                            <TableCell className="text-muted-foreground whitespace-nowrap">
-                                                {new Date(img.createdAt).toLocaleDateString()}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" className="h-8 w-8 p-0">
-                                                            <span className="sr-only">Open menu</span>
-                                                            <MoreVertical className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem onClick={() => navigate(`/admin/resources/edit/${img.id}`)}>
-                                                            <Edit className="mr-2 h-4 w-4" /> Edit
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onClick={() => handleDelete(img.id)}
-                                                            className="text-destructive focus:text-destructive"
-                                                        >
-                                                            <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-
-                        {/* Mobile/Tablet View: Cards */}
-                        <div className="lg:hidden grid gap-4 grid-cols-1 sm:grid-cols-2 p-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                             {filteredImages.map((img: GrammarImage) => (
-                                <Card key={img.id} className="p-4 flex gap-4 items-start">
-                                    <div className="aspect-video w-24 shrink-0 overflow-hidden rounded-md bg-muted flex items-center justify-center border relative">
+                                <Card key={img.id} className="group flex flex-col overflow-hidden border bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow">
+                                    <div className="relative aspect-video w-full overflow-hidden bg-muted">
                                         {img.imageUrl ? (
                                             <>
-                                                <img src={img.thumbnailUrl || img.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover blur-sm opacity-30" />
-                                                <img src={img.thumbnailUrl || img.imageUrl} alt={img.title} className="relative z-10 h-full w-full object-contain" />
+                                                <CachedImage
+                                                    src={img.thumbnailUrl || img.imageUrl}
+                                                    alt=""
+                                                    className="absolute inset-0 h-full w-full object-cover blur-xl opacity-40 scale-110"
+                                                />
+                                                <CachedImage
+                                                    src={img.imageUrl}
+                                                    alt={img.title}
+                                                    className="relative z-10 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                                />
                                             </>
                                         ) : (
-                                            <div className="flex flex-col items-center justify-center">
-                                                <ImageIcon className="h-6 w-6 text-muted-foreground/30" />
-                                                <span className="text-[7px] font-bold text-muted-foreground/20 mt-1 tracking-widest">1920x1080</span>
-                                            </div>
+                                            <ResourcePlaceholder title={img.title} />
                                         )}
-                                    </div>
-                                    <div className="flex-1 min-w-0 flex flex-col h-full justify-between py-0.5">
-                                        <div className="space-y-1">
-                                            <h3 className="font-semibold text-base leading-tight line-clamp-2">{img.title}</h3>
-                                            <p className="text-xs text-muted-foreground">
-                                                {new Date(img.createdAt).toLocaleDateString()}
-                                            </p>
-                                        </div>
-                                        <div className="flex justify-end mt-2">
+
+                                        {/* Admin Actions Overlay */}
+                                        <div className="absolute top-2 right-2 z-20">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                                    <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full bg-black/50 hover:bg-black/70 text-white backdrop-blur-sm border-none">
+                                                        <span className="sr-only">Open menu</span>
                                                         <MoreVertical className="h-4 w-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
@@ -217,6 +148,16 @@ export default function AdminResourceGallery() {
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col flex-1 p-5">
+                                        <h3 className="font-semibold text-lg leading-tight line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+                                            {img.title}
+                                        </h3>
+                                        <div className="mt-auto flex items-center justify-between text-muted-foreground">
+                                            <span className="text-xs font-medium bg-muted px-2 py-1 rounded-full">
+                                                {new Date(img.createdAt).toLocaleDateString()}
+                                            </span>
                                         </div>
                                     </div>
                                 </Card>

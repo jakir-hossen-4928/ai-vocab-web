@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useState, useMemo, useCallback, memo } from "react";
 import { listeningTests } from "@/data/listeningData";
 import { listeningService } from "@/services/listeningService";
+import { checkAnswer } from "@/utils/answerMatcher";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -159,8 +160,7 @@ const ListeningDetail = () => {
         const question = test.sections.flatMap(s => s.questions).find(q => q.id === questionId);
         if (!question) return false;
 
-        const allowed = question.answer.split('/').map(a => a.trim().toLowerCase());
-        return allowed.includes(userAnswer.trim().toLowerCase());
+        return checkAnswer(userAnswer, question.answer);
     }, [test]);
 
     const checkAnswers = () => {

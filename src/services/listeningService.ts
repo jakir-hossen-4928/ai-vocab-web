@@ -161,14 +161,13 @@ export const listeningService = {
 
     // Get Stats
     async getDataStats(): Promise<{ totalTests: number }> {
-        // Count via aggregation or simple full read (if small).
-        // Since we expect < 200 tests, a full read metadata is fine.
-        // Optimization: utilize count() aggregation if available in this SDK version,
-        // but for now, let's just get count from getAllTests length or similar.
-        // getCountFromServer is better but let's stick to what we have imported or add it.
-        // Actually, let's just use getDocs with key selection if possible? No, Firestore client is simple.
-        // We'll trust getAllTests is cached or cheap enough for admin dash.
-        const snapshot = await getDocs(query(collection(db, COLLECTION_NAME)));
-        return { totalTests: snapshot.size };
+        try {
+            const coll = collection(db, COLLECTION_NAME);
+            const snapshot = await getCountFromServer(coll);
+            return { totalTests: snapshot.data().count };
+        } catch (e) {
+            console.error("Error fetching stats:", e);
+            return { totalTests: 0 };
+        }
     }
 };
