@@ -129,6 +129,7 @@ const AppRoutes = () => {
 import { ShareProvider } from "@/contexts/ShareContext";
 import { GlobalShareProxy } from "@/components/GlobalShareProxy";
 import { UTMProvider } from "@/contexts/UTMContext";
+import { AnalyticsProvider } from "@/contexts/AnalyticsContext";
 
 const App = () => {
   return (
@@ -143,7 +144,9 @@ const App = () => {
             <BrowserRouter>
               <UTMProvider>
                 <AuthProvider>
-                  <AppContent />
+                  <AnalyticsProvider>
+                    <AppContent />
+                  </AnalyticsProvider>
                 </AuthProvider>
               </UTMProvider>
             </BrowserRouter>

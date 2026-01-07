@@ -17,6 +17,7 @@ import { useSwipe } from "@/hooks/useSwipe";
 import { metaService } from "@/services/metaService";
 import { Helmet } from "react-helmet-async";
 import { CachedImage } from "@/components/CachedImage";
+import { useTrackResource } from "@/hooks/useAnalytics";
 
 const SwipeHint = ({ onDismiss }: { onDismiss: () => void }) => (
     <motion.div
@@ -45,6 +46,9 @@ export default function ResourceDetail() {
     const isMobile = useIsMobile();
     const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
     const [showSwipeHint, setShowSwipeHint] = useState(true);
+
+    // Analytics tracking
+    const trackResource = useTrackResource();
 
     useEffect(() => {
         if (isMobile) {
@@ -88,6 +92,9 @@ export default function ResourceDetail() {
             if (cachedResource) {
                 setGrammar(cachedResource);
                 setLoading(false);
+
+                // Track resource view
+                trackResource(cachedResource.id, true);
                 return;
             }
 
@@ -97,7 +104,9 @@ export default function ResourceDetail() {
                 const docSnap = await getDoc(docRef);
 
                 if (docSnap.exists()) {
-                    setGrammar({ id: docSnap.id, ...docSnap.data() } as GrammarImage);
+                    const resourceData = { id: docSnap.id, ...docSnap.data() } as GrammarImage;
+                    setGrammar(resourceData);
+                    trackResource(resourceData.id, true);
                 } else {
                     // Try to fetch by slug if ID lookup fails
                     const { collection, query, where, getDocs, limit } = await import("firebase/firestore");
@@ -110,7 +119,9 @@ export default function ResourceDetail() {
 
                     if (!querySnapshot.empty) {
                         const resDoc = querySnapshot.docs[0];
-                        setGrammar({ id: resDoc.id, ...resDoc.data() } as GrammarImage);
+                        const resourceData = { id: resDoc.id, ...resDoc.data() } as GrammarImage;
+                        setGrammar(resourceData);
+                        trackResource(resourceData.id, true);
                     } else {
                         toast.error("Resource not found");
                         navigate("/resources");
@@ -125,7 +136,7 @@ export default function ResourceDetail() {
         };
 
         loadResource();
-    }, [id, navigate, resources]);
+    }, [id, navigate, resources, trackResource]);
 
     // Meta tags are now handles by react-helmet-async in the render
 

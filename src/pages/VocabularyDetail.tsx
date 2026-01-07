@@ -21,6 +21,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useSwipe } from "@/hooks/useSwipe";
 import { ArrowRight } from "lucide-react";
 import { metaService } from "@/services/metaService";
+import { useTrackVocabulary } from "@/hooks/useAnalytics";
 
 const SwipeHint = ({ onDismiss }: { onDismiss: () => void }) => (
   <motion.div
@@ -62,6 +63,9 @@ export default function VocabularyDetail() {
   const { haptic } = useNative();
   const { shareAsImage, shareRef, itemToShare, isSharing: isSharingImage } = useVocabularyShare();
   const [showSwipeHint, setShowSwipeHint] = useState(false);
+
+  // Analytics tracking
+  const trackVocabulary = useTrackVocabulary();
 
   // Show hint on mobile once
   useEffect(() => {
@@ -139,8 +143,11 @@ export default function VocabularyDetail() {
         description: vocab.explanation,
         type: 'website'
       });
+
+      // Track vocabulary view and read
+      trackVocabulary(vocab.id, true);
     }
-  }, [vocab]);
+  }, [vocab, trackVocabulary]);
 
   const toggleFavorite = () => {
     if (!id) return;

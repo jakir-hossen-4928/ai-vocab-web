@@ -74,6 +74,7 @@ import partOfSpeechData from "@/data/partOfSpeech.json";
 import { toast } from "sonner";
 
 import { safeDate } from "@/utils/dateUtils";
+import { UserActivityTab } from "./components/UserActivityTab";
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#8dd1e1', '#a4de6c', '#d0ed57'];
 
@@ -546,9 +547,10 @@ export default function AdminDashboard() {
             </div>
 
             <Tabs defaultValue="overview" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-4 lg:w-[500px]">
+                <TabsList className="grid w-full grid-cols-5 lg:w-[600px]">
                     <TabsTrigger value="overview">Overview</TabsTrigger>
                     <TabsTrigger value="analytics">Analytics</TabsTrigger>
+                    <TabsTrigger value="users">User Activity</TabsTrigger>
                     <TabsTrigger value="insights">Insights</TabsTrigger>
                     <TabsTrigger value="content">Quality</TabsTrigger>
                 </TabsList>
@@ -858,6 +860,11 @@ export default function AdminDashboard() {
                             </div>
                         </CardContent>
                     </Card>
+                </TabsContent>
+
+                {/* USER ACTIVITY TAB */}
+                <TabsContent value="users" className="space-y-6">
+                    <UserActivityTab />
                 </TabsContent>
 
                 {/* INSIGHTS TAB */}
